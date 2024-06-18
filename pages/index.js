@@ -37,20 +37,29 @@ function Music() {
   const blurryImageRef = useRef(null);
   const audioRef = useRef(null); // Initialize ref without a value
 
-  useEffect(() => {
-    // Create the Audio object inside useEffect to ensure it's client-side
-    audioRef.current = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
-  }, []);
-
-  const handlePlayMusic = () => {
-    if (!audioRef.current) return; // Guard clause in case the audio isn't initialized
-
-    if (isPlaying) {
-      audioRef.current.pause();
+  const handlePlayMusic = (songUrl) => {
+    // If there's already an audio playing and it's the same song, toggle play/pause
+    if (audioRef.current && audioRef.current.src === songUrl) {
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
     } else {
+      // If it's a different song, create a new Audio object
+      if (audioRef.current) {
+        audioRef.current.pause(); // Pause the previous audio if any
+      }
+      audioRef.current = new Audio(songUrl);
       audioRef.current.play();
+      setIsPlaying(true);
+
+      // Add event listener to update the state when the song ends
+      audioRef.current.onended = () => {
+        setIsPlaying(false);
+      };
     }
-    setIsPlaying(!isPlaying); // Toggle play state
   };
 
   useEffect(() => {
@@ -176,44 +185,101 @@ useEffect(() => {
 }, []);
 
 const handleClick = () => {
+  if (isPlaying) {
+    audioRef.current.pause();
+    setIsPlaying(false);
+  }
+  const newIndex = (currentIndex + 1) % allMusic.length;
+  setCurrentIndex(newIndex);
+
+  if (allMusic[newIndex] && allMusic[newIndex].data.timestamp) {
+    const serverTimestamp = allMusic[newIndex].data.timestamp;
+    const targetTime = new Date(serverTimestamp.toDate().getTime() + 3 * 24 * 60 * 60 * 1000);
+    setTargetDate(targetTime);
+  }
+
+  // Additional logic for changing background and resetting title input
+  changeBackground();
+  setTitleInput("");
+};
+
+
+
+
+// Prejsna verzija handleClick
+
+const handleClickk = () => {
   setCurrentIndex((prevIndex) => (prevIndex + 1) % allMusic.length);
   changeBackground();
   setTitleInput("");
 };
 
+
 const [timeLeft, setTimeLeft] = useState({});
 
+const [targetDate, setTargetDate] = useState(null);
 
 useEffect(() => {
-  const calculateTimeLeft = () => {
-    if (!allMusic[currentIndex]?.data?.time) return {};
+  const fetchMusicData = async () => {
+    try {
+      const musicCollectionRef = collection(db, 'music');
+      const q = query(musicCollectionRef);
+      const querySnapshot = await getDocs(q);
 
-    const difference = +new Date(allMusic[currentIndex].data.time) - +new Date();
+      if (!querySnapshot.empty) {
+        const musicData = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          data: doc.data()
+        }));
+
+        setAllMusic(musicData);
+
+        // Set initial target date
+        if (musicData[0] && musicData[0].data.timestamp) {
+          const serverTimestamp = musicData[0].data.timestamp;
+          const targetTime = new Date(serverTimestamp.toDate().getTime() + 3 * 24 * 60 * 60 * 1000);
+          setTargetDate(targetTime);
+        }
+      } else {
+        console.log('No documents in music collection!');
+      }
+    } catch (error) {
+      console.error('Error fetching documents:', error);
+    }
+  };
+
+  fetchMusicData();
+}, [db]);
+
+
+const calculateTimeLeft = () => {
+    if (!targetDate) return {};
+
+    const difference = +targetDate - +new Date();
     let timeLeft = {};
 
     if (difference > 0) {
-      timeLeft = {
-        days: Math.floor(difference / (1000 * 60 * 60 * 24)).toString().padStart(2, '0'),
-        hours: Math.floor((difference / (1000 * 60 * 60)) % 24).toString().padStart(2, '0'),
-        minutes: Math.floor((difference / 1000 / 60) % 60).toString().padStart(2, '0'),
-        seconds: Math.floor((difference / 1000) % 60).toString().padStart(2, '0')
-      };
+        timeLeft = {
+            days: Math.floor(difference / (1000 * 60 * 60 * 24)).toString().padStart(2, '0'),
+            hours: Math.floor((difference / (1000 * 60 * 60)) % 24).toString().padStart(2, '0'),
+            minutes: Math.floor((difference / 1000 / 60) % 60).toString().padStart(2, '0'),
+            seconds: Math.floor((difference / 1000) % 60).toString().padStart(2, '0')
+        };
     }
 
     return timeLeft;
-  };
+};
 
-  const updateTimer = () => {
-    setTimeLeft(calculateTimeLeft());
-  };
+useEffect(() => {
+    if (targetDate) {
+        const timer = setTimeout(() => {
+            setTimeLeft(calculateTimeLeft());
+        }, 1000);
 
-  const timer = setInterval(updateTimer, 1000);
-
-  // Initial call to set time left
-  updateTimer();
-
-  return () => clearInterval(timer);
-}, [allMusic, currentIndex]);
+        // Clear timeout if the component is unmounted
+        return () => clearTimeout(timer);
+    }
+}, [targetDate, timeLeft]);
 
 
 const [back, setBack] = useState(0);
@@ -255,7 +321,7 @@ const [back, setBack] = useState(0);
 
 
 const collectKey = async (img, add) => {
-  connectMetamask();
+  await connectMetamask();
   await addDoc(collection(db, "accounts", accounts[0], "myKeys"), {
     image: img,
     address: add
@@ -308,17 +374,19 @@ const sendTitle = async () => {
 };
 
 
+const displayTime = `${timeLeft.days || '00'}:${timeLeft.hours || '00'}:${timeLeft.minutes || '00'}:${timeLeft.seconds || '00'}`;
+
     
 
   return (
     <div className={styles.backgroundForm}>
         <Link href="/profiles/main">
         <div className="absolute top-5 right-5 bg-white p-3 rounded-lg px-6">
-            <div className="text-sm" style={{ fontFamily: 'Reddit Mono' }}>Your profile</div>
+            <div className="text-sm" style={{ fontFamily: 'Reddit Mono' }}>Upload music</div>
         </div>
         </Link>
         <div style={{ fontFamily: 'Reddit Mono' }} className="mt-24 text-white text-3xl">Discover new artists</div>
-        <img src="https://i.postimg.cc/05z87KKh/1p-If-Jv-Logo-Makr.png" className="h-12 absolute left-5 top-5" />
+        <img src="https://i.postimg.cc/15y4pXbG/Group-1-1.png" className="h-12 absolute left-5 top-5 cursor-pointer" />
        {/* <div className="hidden sm:flex mt-4 overflow-x-auto">
             <img src="https://i.postimg.cc/7LY02nX5/9098818-Coop-Records-Headshot.webp" className="h-14 w-14 border border-white rounded-full mx-2" />
             <img src="https://i.postimg.cc/SRrmCCgK/8138403-new-Image.webp" className="h-14 w-14 rounded-full mx-2 border border-white" />
@@ -347,7 +415,7 @@ const sendTitle = async () => {
             </div>
     <div className={`w-14 h-12 bg-white cursor-pointer hover:w-16 hover:h-14 transform transition-all rounded-full flex justify-center items-center ${isVisible ? 'opacity-100' : 'opacity-0'}`}
          
-         onClick={handlePlayMusic}>
+         onClick={() => handlePlayMusic(allMusic[currentIndex].data.song)}>
            {
              isPlaying ? (
               <img src="https://i.postimg.cc/hGktpVCT/8-Vjj-E5-Logo-Makr.png" className="w-4" />
@@ -365,7 +433,7 @@ const sendTitle = async () => {
     </div>
     <div className="relative mr-0 mt-12 sm:mt-0 sm:mr-0 ml-0">
     
-      <div onClick={handlePlayMusic} className="relative overflow-hidden cursor-pointer ml-8 mr-8 sm:mr-0" style={{ height: 220, borderRadius: 10 }}>
+      <div className="relative overflow-hidden cursor-pointer ml-8 mr-8 sm:mr-0" style={{ height: 220, borderRadius: 10 }}>
         
         
         {allMusic.length > 0 && (
@@ -374,11 +442,7 @@ const sendTitle = async () => {
       )}
         
         <div ref={textContainerRef} className="relative overflow-y-scroll h-full justify-center flex" style={{ paddingTop: '100%', width: 220 }}>
-        <div className="w-24 sm:w-24 h-24 p-4 mt-8 rounded-lg shadow-lg border cursor-pointer mb-16">
-                    <img src="https://i.postimg.cc/MG3hVt0H/4zsp-KQ-Logo-Makr.png" className="h-5" />
-                    <p className="text-white text-xs py-2 font-semibold">First listener</p>
-                    
-                </div>
+       
          
         </div>
       </div>
@@ -406,16 +470,20 @@ const sendTitle = async () => {
 
                     
                     <p>
-            {timeLeft.days}:{timeLeft.hours}:{timeLeft.minutes}:{timeLeft.seconds}
+                    {timeLeft.days !== undefined ? displayTime : "Time's up!"}
+           
           </p>
 </div>
 <div style={{ fontFamily: 'Reddit Mono' }} className="flex flex-col ml-2  mt-0 p-0 text-start px-3 bg-[#064569] justify-center items-center rounded-lg text-white text-sm py-1">
 
                     
 {allMusic.length > 0 && (
-        <p className="mt-0" onClick={handleClick}>
-          {allMusic[currentIndex].data.artist} {/* Adjust this to display the desired data */}
+      <Link href={`/profiles/${allMusic[currentIndex].data.artist}`}>
+        <p className="mt-0">
+        {allMusic[currentIndex].data.artist.length > 6 ? `${allMusic[currentIndex].data.artist.slice(0, 3)}...${allMusic[currentIndex].data.artist.slice(-3)}` : allMusic[currentIndex].data.artist}
+          
         </p>
+        </Link>
       )}
 </div>
 </div>

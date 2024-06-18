@@ -6,6 +6,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../firebase'; // adjust the path to your firebase configuration
 import { create } from 'ipfs-http-client';
 import { useRouter } from "next/router";
+import { ethers } from 'ethers';
 
 
 
@@ -540,16 +541,14 @@ useEffect(() => {
 
 
 const addIpfs = async () => {
-  if (getCountdown.length > 0) {
-    alert("jfou");
-  } else {
     await addDoc(collection(db, "accounts", accounts[0], "countdown"), {
       imageUrl: avatarUrl,
-      songUrl: songUrl,
+      song: songUrl,
       limited: false,
       timestamp: serverTimestamp()
     });
-  }
+  alert("Succesful upload");
+  setUploadSong(false);
 }
 
 
@@ -569,7 +568,7 @@ const addLimited = async () => {
       await addDoc(collection(db, "accounts", accounts[0], "countdown"), {
         jsonTitle: `https://timomarket.infura-ipfs.io/ipfs/${result.path}`,
         jsonLimited: `https://timomarket.infura-ipfs.io/ipfs/${resultTwo.path}`,
-        limitedImage: avatarUrl,
+        imageUrl: avatarUrl,
         song: songUrl,
         title: spotifyLink,
         limited: true,
@@ -639,11 +638,14 @@ const [getKeysMusic, setGetKeysMusic] = useState([]);
 
 const [getAdd, setGetAdd] = useState("");
 
+const [getAddTwo, setGetAddTwo] = useState("");
 
 
-const getKeysProfile = async (id) => {
+
+const getKeysProfile = async (id, idTwo) => {
       console.log(id);
       setGetAdd(id);
+      setGetAddTwo(idTwo);
       setProfile(true);
 
       
@@ -669,6 +671,34 @@ const getKeysProfile = async (id) => {
       
 }
 
+const getMyKeysProfile = async () => {
+    console.log(id);
+    setGetAdd(accounts[0]);
+    setProfile(false);
+
+    
+
+      onSnapshot(collection(db, "accounts", accounts[0], "mySongs"),
+    
+      (snapshot) => setGetKeysMusic(snapshot.docs.map((doc) => ({
+          id: doc.id,
+          data: doc.data(),
+    }))))
+
+
+     onSnapshot(collection(db, "accounts", accounts[0], "countdown"),
+    
+      (snapshot) => setGetCountdown(snapshot.docs.map((doc) => ({
+          id: doc.id,
+          data: doc.data(),
+    }))))
+  
+  
+    console.log(getKeysMusic);
+    console.log(getCountdown);
+    
+}
+
 
 
 const [chooseTitle, setChooseTitle] = useState(false);
@@ -685,34 +715,56 @@ const getAndSelectTitle = (id, idTwo) => {
 
 const chooseTitleAndSend = async () => {
     try {
-        // Delete the specific document from "countdown" collection
-        await deleteDoc(doc(db, "accounts", accounts[0], "countdown", selectId));
-        
-        // Add a new document to "mySongs" collection
+        console.log("Deleting the specific document from 'countdown' collection...");
         await addDoc(collection(db, "accounts", accounts[0], "mySongs"), {
             image: getCountdown[0].data.image,
             title: selectTitle,
             song: getCountdown[0].data.songUrl,
         });
+        // Delete the specific document from "countdown" collection
+        await deleteDoc(doc(db, "accounts", accounts[0], "countdown", selectId));
+        console.log("Document deleted successfully.");
 
-        // Fetch and delete all documents in "songTitle" collection
+        // Check if getCountdown[0] exists and has required fields
+        if (!getCountdown[0] || !getCountdown[0].data || !getCountdown[0].data.image || !getCountdown[0].data.songUrl) {
+            throw new Error("Missing data in getCountdown[0]");
+        }
+
+        console.log("Adding a new document to 'mySongs' collection...");
+        // Add a new document to "mySongs" collection
+        
+        console.log("Document added to 'mySongs' collection successfully.");
+
+        console.log("Fetching all documents in 'songTitle' collection...");
+        // Fetch all documents in "songTitle" collection
         const songTitleCollectionRef = collection(db, "accounts", accounts[0], "songTitle");
         const songTitleDocsSnapshot = await getDocs(songTitleCollectionRef);
 
-        const deletePromises = songTitleDocsSnapshot.docs.map((docSnapshot) => 
+        if (songTitleDocsSnapshot.empty) {
+            console.log("No documents found in 'songTitle' collection.");
+        } else {
+            console.log(`Found ${songTitleDocsSnapshot.docs.length} documents in 'songTitle' collection.`);
+        }
+
+        console.log("Deleting all documents in 'songTitle' collection...");
+        // Delete all documents in "songTitle" collection
+        const deletePromises = songTitleDocsSnapshot.docs.map((docSnapshot) =>
             deleteDoc(docSnapshot.ref)
         );
 
         await Promise.all(deletePromises);
+        console.log("All documents in 'songTitle' collection deleted successfully.");
 
         // Provide feedback to the user
         setChooseTitle(false);
         alert("You have named your song and sent it to the address.");
     } catch (error) {
-        console.error("Error deleting documents or adding new document: ", error);
+        console.error("Error occurred during the operation: ", error);
         alert("An error occurred. Please try again.");
     }
 };
+
+
 
 
 
@@ -747,11 +799,10 @@ const sendTitle = async () => {
         const signature = await signer.signMessage(message);
         console.log('Signed message:', signature);
         console.log('Hash:', hash);
-        console.log(allMusic[currentIndex].data.address);
-        console.log(accounts[0]);
+        
   
         // Add document to Firestore
-        await addDoc(collection(db, "accounts", allMusic[currentIndex].data.address, "songTitle"), {
+        await addDoc(collection(db, "accounts", id, "songTitle"), {
           title: titleInput,
           address: accounts[0],
           signature: signature,
@@ -767,6 +818,24 @@ const sendTitle = async () => {
       alert('Please install MetaMask!');
     }
   };
+
+
+  const collectKey = async () => {
+    connectMetamask();
+    await addDoc(collection(db, "accounts", accounts[0], "myKeys"), {
+      image: getCountdown[0].image,
+      address: id
+  })
+  }
+
+
+  const deleteKey = async () => {
+    await deleteDoc(doc(db, "accounts", accounts[0], "myKeys", getAddTwo));
+  }
+
+
+
+
     
 
   return (
@@ -785,7 +854,7 @@ const sendTitle = async () => {
         }
         {
             accounts ? (
-                <div onClick={() => setProfile(false)} className="absolute top-10 right-5 bg-white p-3 rounded-lg px-6 cursor-pointer">
+                <div onClick={getMyKeysProfile} className="absolute top-10 right-5 bg-white p-3 rounded-lg px-6 cursor-pointer">
             <div className="text-sm" style={{ fontFamily: 'Reddit Mono' }}>{accounts[0].length > 6 ? `${accounts[0].slice(0, 3)}...${accounts[0].slice(-3)}` : accounts}</div>
         </div>
             ) : (
@@ -1249,7 +1318,7 @@ const sendTitle = async () => {
         <div className="hidden sm:flex mt-24 overflow-x-autoto">
           {
             allKeys.map((data, index) => {
-              return <img key={index} onClick={() => getKeysProfile(data.data.address)} src={data.data.image} className="h-16 cursor-pointer hover:border-4 w-16 border border-white transition-all rounded-full mx-2" />
+              return <img key={index} onClick={() => getKeysProfile(data.data.address, data.id)} src={data.data.image} className="h-16 cursor-pointer hover:border-4 w-16 border border-white transition-all rounded-full mx-2" />
             })
           }
         
@@ -1290,7 +1359,7 @@ const sendTitle = async () => {
               <div className="relative mr-0 mt-12 sm:mt-0 sm:mr-0 ml-0">
               
                 <div onClick={handlePlayMusic} className="relative overflow-hidden cursor-pointer ml-8 mr-8 sm:mr-0" style={{ height: 220, borderRadius: 10 }}>
-                  <img ref={blurryImageRef} className="absolute top-0 left-0 w-full h-full object-cover rounded-md" src={data.data.image} />
+                  <img ref={blurryImageRef} className="absolute top-0 left-0 w-full h-full object-cover rounded-md" src={data.data.imageUrl} />
                   
           
                   
@@ -1496,7 +1565,7 @@ const sendTitle = async () => {
                         <div className="pt-6">
                        {
                       getKeysMusic.map((data, index) => {
-                        return <div key={index} className="w-full justify-between flex items-center py-2">
+                        return <div onClick={() => handlePlayMusic(data.data.song)} key={index} className="w-full hover:bg-[#79d0ff] cursor-pointer justify-between flex items-center py-2">
                                     <div className="flex items-center ml-5">
                                       <img src={data.data.signMessage} className="mt-12 sm:mt-0 sm:mr-0 h-16 w-16 rounded-md" />
                                       <div className="ml-4">
@@ -1554,7 +1623,7 @@ const sendTitle = async () => {
     <div className="relative mr-0 mt-12 sm:mt-0 sm:mr-0 ml-0">
     
       <div onClick={handlePlayMusic} className="relative overflow-hidden cursor-pointer ml-8 mr-8 sm:mr-0" style={{ height: 220, borderRadius: 10 }}>
-        <img ref={blurryImageRef} className="absolute top-0 left-0 w-full h-full object-cover rounded-md" src={data.data.limitedImage} />
+        <img ref={blurryImageRef} className="absolute top-0 left-0 w-full h-full object-cover rounded-md" src={data.data.imageUrl} />
         
 
         
@@ -1579,14 +1648,31 @@ const sendTitle = async () => {
             
             <div className="relative group w-full sm:w-full sm:mx-0  p-0 rounded-lg border mt-10 sm:mt-0 cursor-pointer">
                     <div className="absolute bottom-full mb-2 bg-black rounded-lg text-white text-xs p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-out hidden group-hover:block">
-                    {data.data.limited ? "Get a chance to get a free limited edition collectable of this song." : "Best idea for a title will be chosen by an artist. A person who´s title will be chosen will also get a one-of-one limited edition NFT of a song."}
+                        {
+                            accounts[0] == id ? (
+                                <>
+                                {data.data.limited ? "When the countdown ends your song will be uploaded for your key holders to collect for free + you will send one limited edition to one of the key holder." : "Here are title ideas from your key holders. The song will be uploaded once you select one of them. Once you do that, you will upload a song with a selected title, send it to the person who wrote it and give access to your holders to collect it for free."}
+                                </>
+                            ) : (
+                                <>
+                                {data.data.limited ? "Get a chance to get a free limited edition collectable of this song." : "Best idea for a title will be chosen by an artist. A person who´s title will be chosen will also get a one-of-one limited edition NFT of a song."}
+                                </>
+                            )
+                        }
+                    
                     </div>
                     <div className="px-3 pt-2">
                         <div className="flex items-center">
                         <div style={{ fontFamily: 'Reddit Mono' }} className="flex flex-col ml-0  mt-0 p-0 text-start px-3 bg-[#064569] justify-center items-center rounded-lg text-white text-sm py-1">
 
-                    
-<p onClick={() => console.log(getCountdown[0].data.timestamp.seconds)} className="mt-0">The song drops in:</p>
+                    {
+                        accounts[0] == id ? (
+                            <p onClick={() => console.log(getCountdown[0].data.timestamp.seconds)} className="mt-0">{data.data.limited ? "The song drops in:" : "Title ideas"}</p>
+                        ) : (
+                            <p onClick={() => console.log(getCountdown[0].data.timestamp.seconds)} className="mt-0">{data.data.limited ? "The song drops in:" : <span>{id.slice(0, 3)}...{id.slice(id.length - 4)}</span>}</p>
+                        )
+                    }
+
 </div>
                     <div style={{ fontFamily: 'Reddit Mono' }} className="flex ml-2 flex-col  mt-0 p-0 text-start w-28 bg-[#6ac8ff] justify-center items-center rounded-lg text-white text-sm py-1">
 
@@ -1701,7 +1787,7 @@ const sendTitle = async () => {
                                     placeholder="Write a title..."
                                     className="w-full border-0 border-b border-white bg-transparent p-2 text-sm placeholder-gray-300 focus:outline-none"
                                 />
-                               <div className="bg-gray-700 p-2 hover:bg-black text-white rounded-full mt-5 justify-center flex items-center">Send</div>
+                               <div onClick={sendTitle} className="bg-gray-700 p-2 hover:bg-black text-white rounded-full mt-5 justify-center flex items-center">Send</div>
                                 </div>
                                 </>
                                 )
@@ -1810,7 +1896,13 @@ const sendTitle = async () => {
                                     <div className="ml-4">
                                       <p className="font-semibold">{data.data.title}</p>
                                       <p className="text-xs text-gray-700">
-                                        {accounts[0].slice(0, 3)}...{accounts[0].slice(accounts[0].length - 4)}
+                                      {id ? (
+  <>
+    {id.slice(0, 3)}...{id.slice(id.length - 4)}
+  </>
+) : (
+  <p>Address not available</p>
+)}
                                       </p>
                                     </div>
                                   </div>
@@ -1840,12 +1932,12 @@ const sendTitle = async () => {
               <div  className="mt-10 border-2 border-[#2d3b6b] p-3 rounded-lg">
                 <p className="text-white text-xl font-bold">Discover new artists</p>
                 <p className="text-gray-300 text-sm mt-1">Collect a key of an artist and get closer access to their music.</p>
-                <div onClick={() => collectKey(allMusic[currentIndex].data.image, allMusic[currentIndex].data.address)} className="flex">
+                <div className="flex">
                     {
                         profile || accounts ? (
                             <div className="flex w-full">
-                                <div className="bg-[#FF69B4] cursor-pointer text-white mt-6 h-11 w-full mr-1 justify-center items-center flex rounded-lg">Collect</div>
-                                <div className="bg-[#8069ff] cursor-pointer text-white mt-6 h-11 w-full mr-1 justify-center items-center flex rounded-lg">Sell (You hold 5 keys)</div>
+                                <div onClick={collectKey} className="bg-[#FF69B4] cursor-pointer text-white mt-6 h-11 w-full mr-1 justify-center items-center flex rounded-lg">Collect</div>
+                                <div onClick={deleteKey} className="bg-[#f14c9f] cursor-pointer text-white mt-6 h-11 w-full mr-1 justify-center items-center flex rounded-lg">Sell (You hold 5 keys)</div>
                             </div>
                         ) : <div className="bg-[#FF69B4] cursor-pointer text-white mt-6 h-11 w-full mr-1 justify-center items-center flex rounded-lg">Collect</div>
                     }
@@ -1875,10 +1967,39 @@ const sendTitle = async () => {
                 </div>
               
             </div>
+            <div className="border-b-2 border-[#181f35] mt-12"></div>
+            
+            {
+                    getMySongs.length > 0 && !profile ? (
+                        <div className="pt-6">
+                        {
+                            getMySongs.map((data, index) => {
+                              return (
+                                <div className="pt-6 w-full mt-20 rounded-2xl bg-[#8AD7FF] overflow-scroll h-96 flex flex-col">
+                                <div onClick={() => handlePlayMusic(data.data.song)} key={index} className="w-full hover:bg-[#79d0ff] cursor-pointer justify-between flex items-center py-2">
+                                    <div className="flex items-center ml-5">
+                                      <img src={data.data.signMessage} className="mt-12 sm:mt-0 sm:mr-0 h-16 w-16 rounded-md" />
+                                      <div className="ml-4">
+                                          <p className="font-semibold">{data.data.title} </p>
+                                          <p className="text-xs text-gray-700">{data.data.account}</p>
+                                      </div>
+                                    </div>
+                                    <div className="mr-6 border text-gray-700 border-gray-700 rounded-full p-2 px-6 cursor-pointer hover:bg-gray-700 hover:text-white">Collect</div>
+                                </div>
+                                </div>
+                              );
+                            })
+                          }
+                          </div>
+                    ) : (
+                        null
+                    )
+                }
+
              <div className="mb-96"></div>
 
               
-
+                    
             
             
             
