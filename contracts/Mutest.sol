@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -9,7 +9,7 @@ import {MusicCollection} from "./MusicCollection.sol";
 import {Verify} from "./Verify.sol";
 
 
-contract MusicFactory is Ownable {
+contract Mutest is Ownable {
 
     address public protocolFeeDestination;
     uint256 public protocolFeePercent;
@@ -25,12 +25,14 @@ contract MusicFactory is Ownable {
     Verify verifyContract;
 
 
-    event Trade(address trader, address subject, bool isBuy, uint256 shareAmount, uint256 ethAmount, uint256 protocolEthAmount, uint256 subjectEthAmount, uint256 supply);
+    event Trade(address indexed trader, address indexed subject, bool isBuy, uint256 shareAmount, uint256 ethAmount, uint256 protocolEthAmount, uint256 subjectEthAmount, uint256 supply);
 
 
-    constructor(address _verify) Ownable(msg.sender) {
-        verifyContract = Verify(_verify);
+
+    constructor() Ownable(msg.sender) {
+        
     }
+
 
 
 
@@ -39,17 +41,9 @@ contract MusicFactory is Ownable {
 
     // Create new music collection and send the first edition
 
-    function createMusicCollection(string memory _tokenString ,address _to, string memory _songTitle, bytes memory _signature, address _toZatest) public {
-        require(verifyContract.verify(_to, _songTitle, _signature), "Verification incomplete!");
-        require(keysBalance[msg.sender][_toZatest] > 0, "Sender doesnt hold your key");
-        MusicCollection create = new MusicCollection(msg.sender, address(this), _tokenString, _songTitle, "");
-        listOfAllCollections.push(create);
-        listOfAllCollections[numberContracts].sendFirstEdition(_toZatest);
-        numberContracts++;
-    }
+    event MusicCollectionCreated(address indexed creator, address collectionAddress);
 
-
-    // Create new music collection and send the first edition
+    // Other contract code...
 
     function createMusicCollectionTwo(string memory _tokenString, address _to, string memory _songTitle, string memory _limited) public {
         require(keysBalance[msg.sender][_to] > 0, "Sender doesnt hold your key");
@@ -57,7 +51,10 @@ contract MusicFactory is Ownable {
         listOfAllCollections.push(create);
         listOfAllCollections[numberContracts].sendLimitedEdition(_to);
         numberContracts++;
+
+        emit MusicCollectionCreated(msg.sender, address(create)); // Emit the event
     }
+
 
    
 
@@ -114,7 +111,6 @@ contract MusicFactory is Ownable {
 
     function buyShares(address sharesSubject, uint256 amount) public payable {
         uint256 supply = keysSupply[sharesSubject];
-        require(supply > 0 || sharesSubject == msg.sender, "Only the shares' subject can buy the first share");
         uint256 price = getPrice(supply, amount);
         uint256 protocolFee = price * protocolFeePercent / 1 ether;
         uint256 subjectFee = price * subjectFeePercent / 1 ether;

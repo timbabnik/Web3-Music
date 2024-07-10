@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import React, { useState, useEffect, useRef } from 'react'
 import styles from '../styles/Home.module.css'
-import { ethers } from 'ethers';
+import { ethers, BigNumber } from 'ethers';
 import { addDoc, collection, deleteDoc, doc, getDocs, onSnapshot, query, serverTimestamp, orderBy, getDoc } from '@firebase/firestore';
 import { db } from '../firebase';
-
+import { useRouter } from "next/router";
+import MusicFactory from "./MusicFactory.json";
+import Mutest from "./Mutest.json";
 
 
 function Music() {
@@ -12,17 +14,24 @@ function Music() {
 
     const [accounts, setAccounts] = useState("");
 
-    const connectMetamask = async() => {
+    const connectMetamask = () => {
+      return new Promise(async (resolve, reject) => {
         if (window.ethereum) {
-            const account = await window.ethereum.request({
-                method: "eth_requestAccounts",
-            })
+          try {
+            const account = await window.ethereum.request({ method: 'eth_requestAccounts' });
             setAccounts(account);
-            
+            resolve(account);
+          } catch (error) {
+            console.error('Error connecting to Metamask: ', error);
+            reject('Error connecting to Metamask');
+          }
+        } else {
+          alert('Metamask is not installed. Please install it to continue.');
+          reject('Metamask is not installed');
         }
-
-        
-      }
+      });
+    };
+    
 
 
       
@@ -319,59 +328,197 @@ const [back, setBack] = useState(0);
     backgroundImage: `linear-gradient(to top, ${backCol[back].first}, ${backCol[back].second})`,
   };
 
-
-const collectKey = async (img, add) => {
-  await connectMetamask();
-  await addDoc(collection(db, "accounts", accounts[0], "myKeys"), {
-    image: img,
-    address: add
-})
-}
+  const router = useRouter();
 
 
+  const addressss = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 
-const sendTitle = async () => {
-  if (window.ethereum) {
-    try {
-      // Request account access if needed
-      const accounts = await window.ethereum.request({
+  
+  async function testek() {
+    if (window.ethereum) {
+      const account = await window.ethereum.request({
         method: "eth_requestAccounts",
       });
+  
+      setAccounts(account);
+  
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const contract = new ethers.Contract(
+        addressss,
+        MusicFactory.abi,
+        signer
+      );
+  
+      try {
 
-      // Set the account state
-      setAccounts(accounts);
+        const transaction = await contract.keysBalance(accounts[0], accounts[0]);
+        console.log(transaction);
 
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const signer = provider.getSigner();
-      const account = await signer.getAddress();
-      setAccount(account);
-
-      const message = titleInput; // Plain text message
-      const hash = ethers.utils.id(message); // Hash the message if needed
-
-      const signature = await signer.signMessage(message);
-      console.log('Signed message:', signature);
-      console.log('Hash:', hash);
-      console.log(allMusic[currentIndex].data.address);
-      console.log(accounts[0]);
-
-      // Add document to Firestore
-      await addDoc(collection(db, "accounts", allMusic[currentIndex].data.address, "songTitle"), {
-        title: titleInput,
-        address: accounts[0],
-        signature: signature,
-      });
-
-
-      alert("Successfully sent title idea.")
-
-    } catch (error) {
-      console.error('Error signing message:', error.message);
+      } catch (err) {
+        console.log("error: ", err);
+      }
     }
-  } else {
-    alert('Please install MetaMask!');
   }
-};
+
+
+  async function collectSmartContract(img, add) {
+    console.log("jou");
+    if (window.ethereum) {
+      const account = await window.ethereum.request({
+        method: "eth_requestAccounts",
+      });
+  
+      setAccounts(account);
+  
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const contract = new ethers.Contract(
+        addressss,
+        Mutest.abi,
+        signer
+      );
+  
+      try {
+        console.log("a dela=", accounts[0], add);
+        const balance = await contract.keysBalance(add, account[0]);
+        const getPri = await contract.getBuyPrice(add, 1);
+        const priceInEther = getPri.toString();
+        console.log("Current keysBalance:", balance.toString());
+        console.log("Current price:", priceInEther.toString());
+
+        const transaction = await contract.buyShares(add, 1, {
+          value: priceInEther
+        });
+
+        
+        const receipt = await transaction.wait(); // Wait for the transaction to be mined
+        
+        console.log("ha?");
+            console.log("Transaction confirmed:", receipt.hash);
+    
+            if (receipt && receipt.hash && balance.toString() < 1) {
+              await addDoc(collection(db, "accounts", account[0], "myKeys"), {
+                image: img,
+                address: add
+              });
+          
+              // Navigate to /profiles/add
+              router.push(`/profiles/${add}`);
+        
+          
+              alert("You have bought this artist's key");
+            } else {
+              console.log("You already have");
+            }
+        
+
+
+      } catch (err) {
+        console.log("error: ", err);
+      }
+    }
+  }
+  
+  
+  
+
+
+  const collectKey = async (img, add) => {
+    
+  
+    try {
+      const account = await connectMetamask();
+  
+      // Check if accounts[0] is set before proceeding
+      if (!account || !account[0]) {
+        console.error('Account is not set.');
+        alert('Unable to retrieve account. Please try again.');
+        return;
+      }
+  
+      // Proceed with adding the document to the collection
+      await addDoc(collection(db, "accounts", account[0], "myKeys"), {
+        image: img,
+        address: add
+      });
+  
+      // Navigate to /profiles/add
+      router.push(`/profiles/${add}`);
+
+  
+      alert("You have bought this artist's key");
+    } catch (error) {
+      console.error('Error adding document: ', error);
+      alert('An error occurred. Please try again.');
+    }
+  };
+  
+  
+
+
+
+  const sendTitle = async () => {
+    if (window.ethereum) {
+      try {
+        // Request account access if needed
+        const accounts = await window.ethereum.request({
+          method: "eth_requestAccounts",
+        });
+  
+        // Set the account state
+        setAccounts(accounts);
+  
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const signer = await provider.getSigner();
+        const account = await signer.getAddress();
+        setAccount(account);
+  
+        const message = titleInput; // Plain text message
+        const hash = ethers.hashMessage(message); // Hash the message if needed
+  
+        const signature = await signer.signMessage(message);
+        console.log('Signed message:', signature);
+        console.log('Hash:', hash);
+        console.log(allMusic[currentIndex].data.address);
+        console.log(accounts[0]);
+  
+        // Define contract details
+        
+  
+        // Create contract instance
+        const contract = new ethers.Contract(
+          addressss,
+          Mutest.abi,
+          signer
+        );
+  
+        const add = allMusic[currentIndex].data.address;
+  
+        // Check balance from smart contract
+        const balance = await contract.keysBalance(add, account);
+        console.log("Current keysBalance:", balance.toString());
+  
+        if (balance.toString() > 0) {
+          // Add document to Firestore
+          await addDoc(collection(db, "accounts", allMusic[currentIndex].data.artist, "songTitle"), {
+            title: titleInput,
+            address: accounts[0],
+            signature: signature,
+          });
+  
+          alert("Successfully sent title idea.");
+        } else {
+          alert("You do not hold any keys for this artist.");
+        }
+  
+      } catch (error) {
+        console.error('Error signing message or interacting with smart contract:', error.message);
+      }
+    } else {
+      alert('Please install MetaMask!');
+    }
+  };
 
 
 const displayTime = `${timeLeft.days || '00'}:${timeLeft.hours || '00'}:${timeLeft.minutes || '00'}:${timeLeft.seconds || '00'}`;
@@ -385,7 +532,7 @@ const displayTime = `${timeLeft.days || '00'}:${timeLeft.hours || '00'}:${timeLe
             <div className="text-sm" style={{ fontFamily: 'Reddit Mono' }}>Upload music</div>
         </div>
         </Link>
-        <div style={{ fontFamily: 'Reddit Mono' }} className="mt-24 text-white text-3xl">Discover new artists</div>
+        <div onClick={testek} style={{ fontFamily: 'Reddit Mono' }} className="mt-24 text-white text-3xl">Discover new artists</div>
         <img src="https://i.postimg.cc/15y4pXbG/Group-1-1.png" className="h-12 absolute left-5 top-5 cursor-pointer" />
        {/* <div className="hidden sm:flex mt-4 overflow-x-auto">
             <img src="https://i.postimg.cc/7LY02nX5/9098818-Coop-Records-Headshot.webp" className="h-14 w-14 border border-white rounded-full mx-2" />
@@ -462,7 +609,7 @@ const displayTime = `${timeLeft.days || '00'}:${timeLeft.hours || '00'}:${timeLe
             
             <div className="relative group w-full sm:w-full sm:mx-0  p-0 rounded-lg border mt-10 sm:mt-0 cursor-pointer">
                     <div className="absolute bottom-full mb-2 bg-black rounded-lg text-white text-xs p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-out hidden group-hover:block">
-                    {allMusic[currentIndex]?.data?.title ? "Best idea for a title will be chosen by an artist. A person who´s title will be chosen will also get a one-of-one limited edition NFT of a song." : "Get a chance to get a free limited edition collectable of this song."}
+                    {allMusic[currentIndex]?.data?.title ? "The artist will review all the title suggestions and choose the best one. A person whose title is chosen will receive credit and a collectible music NFT." : "Get a chance to get a free limited edition collectable of this song."}
                     </div>
                     <div className="px-3 pt-2">
                         <div className="flex items-center">
@@ -494,7 +641,7 @@ const displayTime = `${timeLeft.days || '00'}:${timeLeft.hours || '00'}:${timeLe
                 <>
                   <div className="flex items-center mt-2">
                         
-                  <p className="text-white text-lg font-semibold mt-1 ml-2">Listen to this song, give it a title and be a part of the next big hit</p>
+                  <p className="text-white text-lg font-semibold mt-1 ml-2">Listen to this song, give it a title, and be a part of the next big hit.</p>
                   
                   </div>
             
@@ -522,7 +669,7 @@ const displayTime = `${timeLeft.days || '00'}:${timeLeft.hours || '00'}:${timeLe
                 
                 </div>
           
-                <p className="text-gray-200 text-md mt-1 ml-2 pb-0">One key holder will get the limited edition of this music collectable.</p>
+                <p className="text-gray-200 text-md mt-1 ml-2 pb-0">One key holder will receive a one-of-a-kind limited edition of this music collectible.</p>
             <div className="flex items-center p-2 mt-4 border-t border-[#cfcfcf]">
             <p className="p-0 pb-0 font-bold text-white">FREE</p>
             <p className="text-gray-200 text-sm ml-3">0/1 mints</p>
@@ -606,19 +753,19 @@ const displayTime = `${timeLeft.days || '00'}:${timeLeft.hours || '00'}:${timeLe
                      <p className="mr-4 text-sm text-gray-700">2:13</p>
                  </div>
 </div>*/}
-            <div className="border-b-2 border-[#181f35] mt-12"></div>
+           
             <div  className="mt-10 border-2 border-[#2d3b6b] p-3 rounded-lg">
-                <p className="text-white text-xl font-bold">Discover new artists</p>
-                <p className="text-gray-300 text-sm mt-1">Collect a key of an artist and get closer access to their music.</p>
-                <div onClick={() => collectKey(allMusic[currentIndex].data.image, allMusic[currentIndex].data.address)} className="flex">
-                    <div className="bg-[#FF69B4] cursor-pointer text-white mt-6 h-11 w-full mr-1 justify-center items-center flex rounded-lg">Collect</div>
+                <p className="text-white text-xl font-bold">Collect this artist's key</p>
+                <p className="text-gray-300 text-sm mt-1">You will get a closer access to their music.</p>
+                <div onClick={() => collectSmartContract(allMusic[currentIndex].data.image, allMusic[currentIndex].data.artist)} className="flex">
+                    <div className="bg-[#FF69B4] hover:bg-[#e05c9e] cursor-pointer text-white mt-6 h-11 w-full mr-1 justify-center items-center flex rounded-lg">Collect</div>
                     {/*<div className="bg-[#6b3b53] text-white mt-6 h-11 w-28 ml-1 justify-center items-center flex rounded-lg">
                         <img src="https://i.postimg.cc/1zQ4G4c1/4colpr-Logo-Makr.png" className="w-6" />
                     </div>*/}
                 </div>
             </div>
            
-           
+            <div className="border-b-2 border-[#181f35] mt-12"></div>
             <div className="flex mt-3 flex-wrap items-center justify-center">
                 <div className="w-full sm:w-48 h-44 bg-[#161d31] p-4 mt-8 rounded-lg shadow-lg shadow-[#101522]">
                     <img src="https://i.postimg.cc/MG3hVt0H/4zsp-KQ-Logo-Makr.png" className="h-5" />
@@ -628,7 +775,7 @@ const displayTime = `${timeLeft.days || '00'}:${timeLeft.hours || '00'}:${timeLe
                 <div className="h-44 w-full sm:w-48 sm:mx-10 bg-[#161d31] p-4 mt-8 rounded-lg shadow-lg shadow-[#101522]">
                     <img src="https://i.postimg.cc/3NVBps6L/2v-Buzl-Logo-Makr.png" className="h-5" />
                     <p className="text-gray-300 text-sm py-2 font-semibold">Creative control</p>
-                    <p className="text-xs text-white">When the new music drops, either one of the key holders will get access to pick the song's title or get a limited edition collectable.</p>
+                    <p className="text-xs text-white">The artist has the option to give creative control to their key holders and let them pick a title for the next uploaded song.</p>
                 </div>
                 <div className="h-44 w-full sm:w-48 mx-0 bg-[#161d31] mt-8 p-4 rounded-lg shadow-lg shadow-[#101522]">
                     <img src="https://i.postimg.cc/c13L18Zw/42-Fx1h-Logo-Makr.png" className="h-5" />

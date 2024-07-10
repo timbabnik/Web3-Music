@@ -1,12 +1,19 @@
 import Link from 'next/link'
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useMemo } from 'react'
 import styles from "../../styles/Home.module.css";
-import { addDoc, collection, onSnapshot, getDoc, doc, serverTimestamp, deleteDoc, query, getDocs, where } from 'firebase/firestore';
+import { addDoc, collection, onSnapshot, getDoc, doc, serverTimestamp, deleteDoc, query, getDocs, where, orderBy, limit } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../firebase'; // adjust the path to your firebase configuration
 import { create } from 'ipfs-http-client';
 import { useRouter } from "next/router";
 import { ethers } from 'ethers';
+import {
+    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+  } from 'recharts';
+  import MusicFactory from "../MusicFactory.json";
+  import MusicCollection from "../MusicCollection.json";
+  import Mutest from "../Mutest.json";
+  
 
 
 
@@ -300,9 +307,21 @@ const displayTime = `${timeLeft.days || '00'}:${timeLeft.hours || '00'}:${timeLe
   const blurryImageRef = useRef(null);
   const audioRef = useRef(null); // Initialize ref without a value
 
+
+  const [currentlyPlaying, setCurrentlyPlaying] = useState({ index: null, isPlaying: false });
+
   
 
-  const handlePlayMusic = (songUrl) => {
+  const handlePlayMusic = (songUrl, index) => {
+    setCurrentlyPlaying((prevState) => {
+        if (prevState.index === index) {
+          return { index, isPlaying: !prevState.isPlaying }; // Toggle play/pause for the same song
+        }
+        return { index, isPlaying: true }; // Play new song
+      });
+  
+    console.log(index);
+
     // If there's already an audio playing and it's the same song, toggle play/pause
     if (audioRef.current && audioRef.current.src === songUrl) {
       if (isPlaying) {
@@ -461,6 +480,9 @@ const imageObjectTwo = {
   image: avatarUrlTwo,
   animation_url: songUrl,
 }
+
+
+
 
 
 const [getCountdown, setGetCountdown] = useState([]);
@@ -652,7 +674,7 @@ const getKeysProfile = async (id, idTwo) => {
 
         onSnapshot(collection(db, "accounts", id, "mySongs"),
       
-        (snapshot) => setGetKeysMusic(snapshot.docs.map((doc) => ({
+        (snapshot) => setGetMySongs(snapshot.docs.map((doc) => ({
             id: doc.id,
             data: doc.data(),
       }))))
@@ -668,6 +690,8 @@ const getKeysProfile = async (id, idTwo) => {
     
       console.log(getKeysMusic);
       console.log(getCountdown);
+
+      router.push(`/profiles/${id}`);
       
 }
 
@@ -680,7 +704,7 @@ const getMyKeysProfile = async () => {
 
       onSnapshot(collection(db, "accounts", accounts[0], "mySongs"),
     
-      (snapshot) => setGetKeysMusic(snapshot.docs.map((doc) => ({
+      (snapshot) => setGetMySongs(snapshot.docs.map((doc) => ({
           id: doc.id,
           data: doc.data(),
     }))))
@@ -696,6 +720,8 @@ const getMyKeysProfile = async () => {
   
     console.log(getKeysMusic);
     console.log(getCountdown);
+
+    router.push(`/profiles/${accounts[0]}`);
     
 }
 
@@ -704,12 +730,104 @@ const getMyKeysProfile = async () => {
 const [chooseTitle, setChooseTitle] = useState(false);
 const [selectTitle, setSelectTitle] = useState("");
 const [selectId, setSelectId] = useState("");
+const [selectAddress, setSelectAddress] = useState("");
+const [selectSignature, setSelectSignature] = useState("");
 
 
-const getAndSelectTitle = (id, idTwo) => {
+const getAndSelectTitle = (id, addresss, signaturee, idTwo) => {
     setChooseTitle(true);
     setSelectTitle(id);
+    setSelectAddress(addresss);
+    setSelectSignature(signaturee);
     setSelectId(idTwo);
+}
+
+const imageObjectTitle = {
+  name: selectTitle,
+  image: getCountdown[0]?.imageUrl,
+  animation_url: getCountdown[0]?.song,
+}
+
+const testChooseTitleandsend = async () => {
+  const result = await ipfs.add(JSON.stringify(imageObjectTitle));
+
+  if (result) {
+
+  }
+
+}
+
+
+async function chooseTitlesendTest() {
+  console.log("jou");
+  if (window.ethereum) {
+    const account = await window.ethereum.request({
+      method: "eth_requestAccounts",
+    });
+
+    setAccounts(account);
+
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
+    const contract = new ethers.Contract(
+      addressss,
+      MusicFactory.abi,
+      signer
+    );
+
+    try {
+      const result = await ipfs.add(JSON.stringify(imageObjectTitle));
+      const balance = await contract.keysSupply(id);
+
+      if (result) {
+        if (balance.toString() > 0) {
+          // Listen for the event before sending the transaction
+          contract.on('MusicCollectionCreated', async (creator, collectionAddress) => {
+            console.log(`New music collection created by ${creator}, address: ${collectionAddress}`);
+  
+            await addDoc(collection(db, "accounts", accounts[0], "mySongs"), {
+              image: getCountdown[0].data.imageUrl,
+              title: getCountdown[0].data.title,
+              song: getCountdown[0].data.song,
+              smartContractAddress: collectionAddress
+            });
+  
+            // Remove the event listener after receiving the event
+            contract.off('MusicCollectionCreated');
+          });
+        const transaction = await contract.createMusicCollection(`https://timomarket.infura-ipfs.io/ipfs/${result.path}`, selectAddress, selectTitle, selectSignature);
+        const receipt = await transaction.wait();
+
+        if (receipt && receipt.hash) {
+          chooseTitleAndSenddd();
+
+      }
+
+       // Wait for the transaction to be mined
+      
+      
+
+
+          
+  
+          
+           
+        
+            // Navigate to /profiles/add
+            router.push(`/profiles/${id}`);
+      
+        
+            alert("You have bought this artist's key");
+          } else {
+            console.log("You already have");
+          }
+        }
+
+
+    } catch (err) {
+      console.log("error: ", err);
+    }
+  }
 }
 
 
@@ -768,16 +886,135 @@ const chooseTitleAndSend = async () => {
 
 
 
+const chooseTitleAndSenddd = async () => {
+  try {
+      console.log("Deleting the specific document from 'countdown' collection...");
+      
+      // Delete the specific document from "countdown" collection
+      await deleteDoc(doc(db, "accounts", accounts[0], "countdown", selectId));
+      console.log("Document deleted successfully.");
+
+      // Check if getCountdown[0] exists and has required fields
+      if (!getCountdown[0] || !getCountdown[0].data || !getCountdown[0].data.image || !getCountdown[0].data.songUrl) {
+          throw new Error("Missing data in getCountdown[0]");
+      }
+
+      console.log("Adding a new document to 'mySongs' collection...");
+      // Add a new document to "mySongs" collection
+      
+      console.log("Document added to 'mySongs' collection successfully.");
+
+      console.log("Fetching all documents in 'songTitle' collection...");
+      // Fetch all documents in "songTitle" collection
+      const songTitleCollectionRef = collection(db, "accounts", accounts[0], "songTitle");
+      const songTitleDocsSnapshot = await getDocs(songTitleCollectionRef);
+
+      if (songTitleDocsSnapshot.empty) {
+          console.log("No documents found in 'songTitle' collection.");
+      } else {
+          console.log(`Found ${songTitleDocsSnapshot.docs.length} documents in 'songTitle' collection.`);
+      }
+
+      console.log("Deleting all documents in 'songTitle' collection...");
+      // Delete all documents in "songTitle" collection
+      const deletePromises = songTitleDocsSnapshot.docs.map((docSnapshot) =>
+          deleteDoc(docSnapshot.ref)
+      );
+
+      await Promise.all(deletePromises);
+      console.log("All documents in 'songTitle' collection deleted successfully.");
+
+      // Provide feedback to the user
+      setChooseTitle(false);
+      alert("You have named your song and sent it to the address.");
+  } catch (error) {
+      console.error("Error occurred during the operation: ", error);
+      alert("An error occurred. Please try again.");
+  }
+};
+
+
+
+
+
 const [titleInput, setTitleInput] = useState("");
 const [moreMusic, setMoreMusic] = useState(false);
 
 
 const deleteLimitedCountdown = async (idOf) => {
+    await addDoc(collection(db, "accounts", accounts[0], "mySongs"), {
+      image: getCountdown[0].data.image,
+      title: selectTitle,
+      song: getCountdown[0].data.songUrl,
+  });
     await deleteDoc(doc(db, "accounts", accounts[0], "countdown", idOf));
+    alert("You have sent the NFT to a random key holder");
+}
+
+async function deleteLimitedCountdownn(idOf, jsonTit, address, song, jsonLim) {
+  console.log("jou");
+  if (window.ethereum) {
+    const account = await window.ethereum.request({
+      method: "eth_requestAccounts",
+    });
+
+    setAccounts(account);
+
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
+    const contract = new ethers.Contract(
+      addressss,
+      Mutest.abi,
+      signer
+    );
+
+    try {
+      console.log("a dela=", accounts[0], id);  // Make sure 'idOf' is defined
+
+      // Check if the 'keysSupply' method exists in the ABI
+      const balance = await contract.keysSupply(id);
+      console.log(balance.toString(), "tuki");
+      console.log("kaj", jsonTit, address, song, jsonLim);
+
+      if (balance.toString() > 0) {
+        // Listen for the event before sending the transaction
+        contract.on('MusicCollectionCreated', async (creator, collectionAddress) => {
+          console.log(`New music collection created by ${creator}, address: ${collectionAddress}`);
+
+          await addDoc(collection(db, "accounts", accounts[0], "mySongs"), {
+            image: getCountdown[0].data.imageUrl,
+            title: getCountdown[0].data.title,
+            song: getCountdown[0].data.song,
+            smartContractAddress: collectionAddress
+          });
+
+          // Remove the event listener after receiving the event
+          contract.off('MusicCollectionCreated');
+        });
+
+        // Execute the transaction
+        const transaction = await contract.createMusicCollectionTwo(jsonTit, address, song, jsonLim);
+        const receipt = await transaction.wait();  // Wait for the transaction to be mined
+
+        if (receipt && receipt.hash) {
+          await deleteDoc(doc(db, "accounts", accounts[0], "countdown", idOf));
+          alert("You have sent the NFT to a random key holder");
+        } else {
+          console.log("Transaction failed or no receipt found");
+        }
+      } else {
+        alert("You don't have any key holders");
+      }
+    } catch (err) {
+      console.log("error: ", err);
+    }
+  }
 }
 
 
-const sendTitle = async () => {
+
+
+const sendTitlee = async () => {
     if (window.ethereum) {
       try {
         // Request account access if needed
@@ -819,8 +1056,69 @@ const sendTitle = async () => {
     }
   };
 
+  const sendTitle = async () => {
+    if (window.ethereum) {
+      try {
+        // Request account access if needed
+        const accounts = await window.ethereum.request({
+          method: "eth_requestAccounts",
+        });
+  
+        // Set the account state
+        setAccounts(accounts);
+  
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const signer = await provider.getSigner();
+        const account = await signer.getAddress();
+        setAccount(account);
+  
+        const message = titleInput; // Plain text message
+        const hash = ethers.hashMessage(message); // Hash the message if needed
+  
+        const signature = await signer.signMessage(message);
+        console.log('Signed message:', signature);
+        console.log('Hash:', hash);
+        
+        console.log(accounts[0]);
+  
+        // Define contract details
+        
+  
+        // Create contract instance
+        const contract = new ethers.Contract(
+          addressss,
+          Mutest.abi,
+          signer
+        );
+  
+  
+        // Check balance from smart contract
+        const balance = await contract.keysBalance(id, account);
+        console.log("Current keysBalance:", balance.toString());
+  
+        if (balance.toString() > 0) {
+          // Add document to Firestore
+          await addDoc(collection(db, "accounts", id, "songTitle"), {
+            title: titleInput,
+            address: accounts[0],
+            signature: signature,
+          });
+  
+          alert("Successfully sent title idea.");
+        } else {
+          alert("You do not hold any keys for this artist.");
+        }
+  
+      } catch (error) {
+        console.error('Error signing message or interacting with smart contract:', error.message);
+      }
+    } else {
+      alert('Please install MetaMask!');
+    }
+  };
 
-  const collectKey = async () => {
+
+  const collectKeyy = async () => {
     connectMetamask();
     await addDoc(collection(db, "accounts", accounts[0], "myKeys"), {
       image: getCountdown[0].image,
@@ -829,17 +1127,318 @@ const sendTitle = async () => {
   }
 
 
-  const deleteKey = async () => {
-    await deleteDoc(doc(db, "accounts", accounts[0], "myKeys", getAddTwo));
+  const addressss = "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1";
+
+  async function collectKey() {
+    console.log("jou");
+    if (window.ethereum) {
+      const account = await window.ethereum.request({
+        method: "eth_requestAccounts",
+      });
+  
+      setAccounts(account);
+  
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const contract = new ethers.Contract(
+        addressss,
+        Mutest.abi,
+        signer
+      );
+  
+      try {
+        console.log("a dela=", accounts[0], id);
+        console.log("jap");
+        const balance = await contract.keysBalance(id, account[0]);
+        console.log("noup");
+        const getPri = await contract.getBuyPrice(id, 1);
+        console.log("sevedno");
+        const priceInEther = getPri.toString();
+        console.log("sevedno sevedno");
+        
+        console.log("konec");
+        
+        console.log("Current keysBalance:", balance.toString());
+        console.log("Current price:", priceInEther.toString());
+        console.log("Current priceeee:", ethers.formatUnits(priceInEther, "ether"));
+
+        const transaction = await contract.buyShares(id, 1, {
+          value: priceInEther
+        });
+        const receipt = await transaction.wait(); // Wait for the transaction to be mined
+        
+        console.log("ha?");
+            console.log("Transaction confirmed:", receipt.hash);
+
+
+            
+
+    
+            if (receipt && receipt.hash && balance.toString() < 1) {
+              await addDoc(collection(db, "accounts", accounts[0], "history"), {
+                value: ethers.formatUnits(priceInEther, "ether"),
+                name: accounts[0].slice(0, 3),
+                buy: true,
+                timestamp: serverTimestamp()
+            })
+
+            
+              await addDoc(collection(db, "accounts", accounts[0], "myKeys"), {
+                image: getCountdown[0].data.imageUrl,
+                address: id
+            })
+          
+              // Navigate to /profiles/add
+              router.push(`/profiles/${id}`);
+        
+          
+              alert("You have bought this artist's key");
+            } else {
+              console.log("You already have");
+            }
+        
+
+
+      } catch (err) {
+        console.log("error: ", err);
+      }
+    }
   }
 
 
+
+  async function collectMusic(smartcontract) {
+    console.log("jou");
+    if (window.ethereum) {
+      const account = await window.ethereum.request({
+        method: "eth_requestAccounts",
+      });
+  
+      setAccounts(account);
+  
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const contract = new ethers.Contract(
+        smartcontract,
+        MusicCollection.abi,
+        signer
+      );
+  
+      try {
+        console.log("a dela=", accounts[0], id);
+
+        const transaction = await contract.mint(id);
+        const receipt = await transaction.wait(); // Wait for the transaction to be mined
+        
+        console.log("ha?");
+            console.log("Transaction confirmed:", receipt.hash);
+    
+            if (receipt && receipt.hash) {
+              alert("You have bought this artist's music");
+          
+            
+          
+              
+            } else {
+              console.log("You already have");
+            }
+        
+
+
+      } catch (err) {
+        console.log("error: ", err);
+      }
+    }
+  }
+
+
+  const deleteKeyy = async () => {
+    await deleteDoc(doc(db, "accounts", accounts[0], "myKeys", getAddTwo));
+    getMyKeysProfile();
+  }
+
+  async function deleteKey() {
+    console.log("jou");
+    if (window.ethereum) {
+      const account = await window.ethereum.request({
+        method: "eth_requestAccounts",
+      });
+  
+      setAccounts(account);
+  
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const contract = new ethers.Contract(
+        addressss,
+        MusicFactory.abi,
+        signer
+      );
+  
+      try {
+        console.log("a dela=", accounts[0], id);
+        const balance = await contract.keysBalance(id, account[0]);
+        const getPri = await contract.getBuyPrice(id, 1);
+        const priceInEther = ethers.formatEther(getPri);
+        console.log("Current keysBalance:", balance.toString());
+
+        const transaction = await contract.sellShares(id, 1);
+        const receipt = await transaction.wait(); // Wait for the transaction to be mined
+        
+        console.log("ha?");
+            console.log("Transaction confirmed:", receipt.hash);
+
+            await addDoc(collection(db, "accounts", accounts[0], "history"), {
+              value: priceInEther.toString(),
+              name: accounts[0],
+              buy: false,
+              timestamp: serverTimestamp()
+          })
+    
+            if (receipt && receipt.hash && balance.toString() == 1) {
+              await deleteDoc(doc(db, "accounts", accounts[0], "myKeys", getAddTwo));
+              getMyKeysProfile();
+
+              // Navigate to /profiles/add
+              router.push(`/profiles/${id}`);
+        
+          
+              alert("You have bought this artist's key");
+            } else {
+              console.log("You already have");
+            }
+        
+
+
+      } catch (err) {
+        console.log("error: ", err);
+      }
+    }
+  }
+
+
+  const addsre = "0xa16E02E87b7454126E5E10d957A927A7F5B5d2be";
+
+  const providerrr = new ethers.JsonRpcProvider("http://127.0.0.1:8545/");
+
+  const contractAward = new ethers.Contract(addressss, MusicFactory.abi, providerrr); 
+  const contractAwardd = new ethers.Contract(addsre, MusicCollection.abi, providerrr); 
+
+
+  const [keyNumber, setKeyNumber] = useState("");
+
+  const getKeysNumber = async () => {
+    try {
+        // Ensure id and accounts[0] are valid
+        if (!id) {
+            throw new Error("Invalid id");
+        }
+        if (!accounts || !accounts[0]) {
+            throw new Error("Invalid account address");
+        }
+
+        const balance = await contractAward.keysBalance(id, accounts[0]);
+        console.log(balance.toString());
+        setKeyNumber(balance.toString());
+    } catch (error) {
+        console.error("Error getting keys number:", error);
+    }
+};
+
+useEffect(() => {
+  getKeysNumber();
+}, [accounts, id])
+
+
+
+
+
+  const initialData = [
+    { name: 'Item 1', value: 120 },
+    { name: 'Item 1', value: 60 },
+  ];
+  
+  
+  
+  const [graphData, setGraphData] = useState(initialData);
+
+
+
+  const [datk, setDatk] = useState([]);
+
+  useEffect(() => {
+    // If id is not available, do not proceed
+    if (!id) {
+      console.log('ID is undefined');
+      return;
+    }
+
+    console.log('ID is available:', id);
+
+    const fetchData = async () => {
+      try {
+        console.log("Fetching data for ID:", id);
+        const querySnapshot = await getDocs(query(collection(db, "accounts", id, "history"), orderBy('timestamp', 'desc'), limit(5)));
+
+        const fetchedData = querySnapshot.docs.map(doc => ({
+          name: doc.data().name, // Replace with your field name for X-axis (timestamp or any other)
+          value: doc.data().value // Replace with your field name for Y-axis (value or any other)
+        }));
+
+        console.log("Fetched data:", fetchedData);
+        setDatk(fetchedData.reverse()); // Reverse array to show latest data first
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+
+    const subscribeToUpdates = () => {
+      try {
+        const q = query(collection(db, "accounts", id, "history"), orderBy('timestamp', 'desc'), limit(5));
+        console.log("Snapshot query:", q);
+
+        return onSnapshot(q, snapshot => {
+          const fetchedData = snapshot.docs.map(doc => ({
+            name: doc.data().name, // Replace with your field name for X-axis (timestamp or any other)
+            value: doc.data().value // Replace with your field name for Y-axis (value or any other)
+          }));
+
+          console.log("Snapshot fetched data:", fetchedData);
+          setDatk(fetchedData.reverse()); // Reverse array to show latest data first
+        });
+      } catch (error) {
+        console.error('Error setting up snapshot listener:', error);
+      }
+    };
+
+    fetchData(); // Initial fetch
+    const unsubscribe = subscribeToUpdates(); // Set up snapshot listener
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [id]); // Re-run effect when id changes
+
+
+
+  
+
+
+const openUploadSong = () => {
+  if (keyNumber > 0) {
+    setUpload(true);
+  } else {
+    alert("You have to be the first one to collect your key for others to do the same. Collect your key below and come back :)")
+  }
+}
 
 
     
 
   return (
     <div className={styles.backgroundForm}>
+       
         {
             chooseTitle && (
                 <div className={styles.modaloverlay}>
@@ -848,7 +1447,7 @@ const sendTitle = async () => {
         <img src="https://i.postimg.cc/yYcHRxk7/8d-CSST-Logo-Makr.png" className="w-20" />
         <p className="text-gray-400 text-2xl mt-10 border-t border-[#202947] w-96 text-center pt-6">Title of your song: <span className="text-white">{selectTitle}</span></p>
         <p className="text-white font-light text-sm w-96 text-center mt-5">Do you want to select that to be the title of your song, and send the first collectable music NFT of that song to the person that suggested the title?</p>
-        <div onClick={chooseTitleAndSend} className="bg-blue-500 text-white w-32 h-10 rounded-lg justify-center items-center flex mt-10 cursor-pointer hover:bg-blue-400">Yes</div>
+        <div onClick={chooseTitlesendTest} className="bg-blue-500 text-white w-32 h-10 rounded-lg justify-center items-center flex mt-10 cursor-pointer hover:bg-blue-400">Yes</div>
       </div></div>
             )
         }
@@ -1331,10 +1930,16 @@ const sendTitle = async () => {
                     {
                       profile ? (
                         <>
-                        {
-                          allKeys.map((data, index) => {
-                            return <div>
-                                        <div className="relative pt-10 mt-0 pb-24 w-full rounded-t-2xl bg-gradient-to-t from-[#4abdff] to-[#00A3FF] flex flex-col sm:flex-row justify-between ">
+                         <div>
+                                        <div className="relative pt-10 mt-0 pb-24 w-full rounded-2xl bg-gradient-to-t from-[#4abdff] to-[#00A3FF] flex flex-col sm:flex-row justify-between ">
+                                          
+                                          {getCountdown.length == 0 && (
+                                            <div className="flex items-center justify-center w-full mt-10 h-48">
+                                             <p className="mt-10 mb-10 text-white text-xl">No upcoming music</p>
+                                           <img className="w-12 ml-6" src="https://i.postimg.cc/gjtDmVwz/2h-HJpz-Logo-Makr.png" />
+                                            </div>
+                                          )}
+                                         
                                             {
                                                 getCountdown.map((data, index) => {
                                                     return <>
@@ -1559,40 +2164,13 @@ const sendTitle = async () => {
           
                       </div>
 
-                      <div className="pt-0 w-full rounded-b-2xl bg-[#8AD7FF] overflow-scroll h-72 flex flex-col">
-                {
-                    getMySongs.length > 0 ? (
-                        <div className="pt-6">
-                       {
-                      getKeysMusic.map((data, index) => {
-                        return <div onClick={() => handlePlayMusic(data.data.song)} key={index} className="w-full hover:bg-[#79d0ff] cursor-pointer justify-between flex items-center py-2">
-                                    <div className="flex items-center ml-5">
-                                      <img src={data.data.signMessage} className="mt-12 sm:mt-0 sm:mr-0 h-16 w-16 rounded-md" />
-                                      <div className="ml-4">
-                                          <p className="font-semibold">{data.data.title} </p>
-                                          <p className="text-xs text-gray-700">{data.data.account}</p>
-                                      </div>
-                                    </div>
-                                    <div className="mr-6 border text-gray-700 border-gray-700 rounded-full p-2 px-6 cursor-pointer hover:bg-gray-700 hover:text-white">Collect</div>
-                                </div>
-                      })
-                    }
-                          </div>
-                    ) : (
-                        <div className="justify-center items-center flex h-full">
-                        <p className="">This address hasn't uploaded any music yet</p>
-                        </div>
-                    )
-                }
- 
-</div>
+                      
           
                       
           
                       
                      </div>
-                          })
-                        }
+                          
                         </>
                       ) : (
                   <>
@@ -1601,6 +2179,8 @@ const sendTitle = async () => {
                     <>
                     {
                         getCountdown.map((data, index) => {
+                            const isPlaying = currentlyPlaying.index === data.data.title && currentlyPlaying.isPlaying;
+
                             return <>
                             <div className="relative pt-10 pb-24 w-full rounded-2xl bg-gradient-to-t from-[#4abdff] to-[#00A3FF] flex flex-col sm:flex-row justify-between ">
                 <div className="absolute bottom-5 right-5 flex w-full justify-center items-center">
@@ -1609,7 +2189,7 @@ const sendTitle = async () => {
             </div>
     <div className={`w-14 h-12 bg-white cursor-pointer hover:w-16 hover:h-14 transform transition-all rounded-full flex justify-center items-center ${isVisible ? 'opacity-100' : 'opacity-0'}`}
          
-         onClick={() => handlePlayMusic(data.data.song)}>
+         onClick={() => handlePlayMusic(data.data.song, data.data.title)}>
         {
              isPlaying ? (
               <img src="https://i.postimg.cc/hGktpVCT/8-Vjj-E5-Logo-Makr.png" className="w-4" />
@@ -1651,7 +2231,19 @@ const sendTitle = async () => {
                         {
                             accounts[0] == id ? (
                                 <>
-                                {data.data.limited ? "When the countdown ends your song will be uploaded for your key holders to collect for free + you will send one limited edition to one of the key holder." : "Here are title ideas from your key holders. The song will be uploaded once you select one of them. Once you do that, you will upload a song with a selected title, send it to the person who wrote it and give access to your holders to collect it for free."}
+                                {data.data.limited  ? (
+                                <>
+                                {
+                                    timeLeft.days !== undefined ? (
+                                        <p>When the countdown ends, your song will be uploaded for your key holders to collect for free, and you will send a limited edition to one of the key holders.</p>
+                                    ) : (
+                                        <p>By clicking "Send," you will send a limited edition collectible NFT of your song to one of your key holders. Additionally, the basic version will be uploaded for every key holder to collect for free.</p>
+                                    )
+                                }
+                                </>
+                                
+                                )
+                                : "Here are title ideas from your key holders. The song will be uploaded once you select one of them. Once you do that, you will upload a song with a selected title, send it to the person who wrote it and give access to your holders to collect it for free."}
                                 </>
                             ) : (
                                 <>
@@ -1723,7 +2315,7 @@ const sendTitle = async () => {
                         </div>
                   
                         <p className="text-gray-200 text-sm mt-2 ml-0 pb-0">Send limited edition NFT of this song to one of your key holders.</p>
-                        <div onClick={() => deleteLimitedCountdown(data.id)} className="mt-4 text-white bg-[#FF4F8B] p-2 justify-center items-center flex rounded-full">Send</div>
+                        <div onClick={() => deleteLimitedCountdownn(data.id, data.data.jsonTitle, data.data.randomAddress, data.data.title, data.data.jsonLimited)} className="mt-4 text-white bg-[#FF4F8B] hover:bg-[#e9497e] p-2 justify-center items-center flex rounded-full">Send</div>
                             </div>
                                             )
                                         }
@@ -1761,7 +2353,7 @@ const sendTitle = async () => {
                                                 <>
                                                     {
                                             getSongTitle.map((dataa, index) => {
-                                            return <p onClick={() => getAndSelectTitle(dataa.data.song, data.id)} key={index} className="text-white hover:bg-white hover:text-black border p-2 rounded-lg mr-2 mt-2">{dataa.data.song}</p>
+                                            return <p onClick={() => getAndSelectTitle(dataa.data.title, dataa.data.address, dataa.data.signature, data.id)} key={index} className="text-white hover:bg-white hover:text-black border p-2 rounded-lg mr-2 mt-2">{dataa.data.title}</p>
                                             })
                                         }
                                                 </>
@@ -1856,9 +2448,9 @@ const sendTitle = async () => {
                     <>
                     {
                         accounts[0] == id ? (
-<div className=" py-10 mt-0 w-full rounded-t-2xl bg-[#00A3FF] justify-center items-center flex flex-col sm:flex-row">
+<div className=" py-10 mt-0 w-full h-96 rounded-2xl bg-gradient-to-b from-[#00A3FF] to-[#8AD7FF] justify-center items-center flex flex-col sm:flex-row">
                  <div className="flex items-center">
-                    <div onClick={() => setUploadSong(true)} className="w-28 h-28 bg-white cursor-pointer hover:w-32 hover:h-32 transition-all rounded-full ml-0 sm:ml-0 justify-center items-center flex">
+                    <div onClick={openUploadSong} className="w-28 h-28 bg-white cursor-pointer hover:w-32 hover:h-32 transition-all rounded-full ml-0 sm:ml-0 justify-center items-center flex">
 
                         <img src="https://i.postimg.cc/L4r9HYLW/9-F7k-KO-Logo-Makr.png" className="w-12" />
                     </div>
@@ -1874,7 +2466,7 @@ const sendTitle = async () => {
                           
             </div>
                         ) : (
-                            <div className=" py-10 mt-0 w-full rounded-t-2xl bg-[#00A3FF] justify-center items-center flex flex-col sm:flex-row">
+                            <div className=" py-10 mt-0 w-full rounded-2xl bg-gradient-to-b from-[#00A3FF] to-[#8AD7FF] h-96 justify-center items-center flex flex-col sm:flex-row">
                             <p className="mt-10 mb-10 text-white text-xl">No upcoming music</p>
                             <img className="w-12 ml-6" src="https://i.postimg.cc/gjtDmVwz/2h-HJpz-Logo-Makr.png" />
                                      
@@ -1883,43 +2475,7 @@ const sendTitle = async () => {
                     }
                      
 
-            <div className="pt-0 w-full rounded-b-2xl bg-[#8AD7FF] overflow-scroll h-72 flex flex-col">
-                {
-                    getMySongs.length > 0 ? (
-                        <div className="pt-6">
-                        {
-                            getMySongs.map((data, index) => {
-                              return (
-                                <div key={index} className="w-full flex items-center justify-between p-3">
-                                  <div className="flex items-center ml-5">
-                                    <img src={data.data.image} alt={data.data.title} className="mt-12 sm:mt-0 sm:mr-0 h-16 w-16 rounded-md" />
-                                    <div className="ml-4">
-                                      <p className="font-semibold">{data.data.title}</p>
-                                      <p className="text-xs text-gray-700">
-                                      {id ? (
-  <>
-    {id.slice(0, 3)}...{id.slice(id.length - 4)}
-  </>
-) : (
-  <p>Address not available</p>
-)}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })
-                          }
-                          </div>
-                    ) : (
-                        <div className="justify-center items-center flex h-full">
-                        <p className="">This address hasn't uploaded any music yet</p>
-                        </div>
-                    )
-                }
- 
-</div>
-
+            
             
                     </>
                   )}</>
@@ -1928,18 +2484,28 @@ const sendTitle = async () => {
               }
               
               <>
-              <div className="border-b-2 border-[#181f35] mt-12"></div>
+            { id === "main" ? (
+                null
+            ) : (<> 
               <div  className="mt-10 border-2 border-[#2d3b6b] p-3 rounded-lg">
-                <p className="text-white text-xl font-bold">Discover new artists</p>
-                <p className="text-gray-300 text-sm mt-1">Collect a key of an artist and get closer access to their music.</p>
+                <p  className="text-white text-xl font-bold">Collect this artist's key</p>
+                <p  className="text-gray-300 text-sm mt-1">You will get a closer access to their music.</p>
                 <div className="flex">
                     {
-                        profile || accounts ? (
+                        (profile || accounts) && keyNumber > 0 ? (
                             <div className="flex w-full">
-                                <div onClick={collectKey} className="bg-[#FF69B4] cursor-pointer text-white mt-6 h-11 w-full mr-1 justify-center items-center flex rounded-lg">Collect</div>
-                                <div onClick={deleteKey} className="bg-[#f14c9f] cursor-pointer text-white mt-6 h-11 w-full mr-1 justify-center items-center flex rounded-lg">Sell (You hold 5 keys)</div>
+                                <div onClick={collectKey} className="bg-[#FF69B4] hover:bg-[#f060a8] cursor-pointer text-white mt-6 h-11 w-full mr-1 justify-center items-center flex rounded-lg">Collect</div>
+                                <button 
+                                  onClick={deleteKey} 
+                                  className={`${
+                                    keyNumber == 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#f14c9f] hover:bg-[#d8428d] cursor-pointer'
+                                  } text-white mt-6 h-11 w-full mr-1 justify-center items-center flex rounded-lg`}
+                                  disabled={keyNumber === 0}
+                                >
+                                  Sell (You hold {keyNumber} keys)
+                                </button>
                             </div>
-                        ) : <div className="bg-[#FF69B4] cursor-pointer text-white mt-6 h-11 w-full mr-1 justify-center items-center flex rounded-lg">Collect</div>
+                        ) : <div div onClick={collectKey} className="bg-[#FF69B4] cursor-pointer text-white mt-6 h-11 w-full mr-1 justify-center items-center flex rounded-lg">Collect</div>
                     }
                    
                     {/*<div className="bg-[#6b3b53] text-white mt-6 h-11 w-28 ml-1 justify-center items-center flex rounded-lg">
@@ -1947,58 +2513,128 @@ const sendTitle = async () => {
                     </div>*/}
                 </div>
             </div>
+            {
+                accounts ? (
+                    null
+                ) : (
+                    <>
+                    <div className="border-b-2 border-[#181f35] mt-12"></div>
            
-           
-            <div className="flex mt-3 flex-wrap items-center justify-center">
-                <div className="w-full sm:w-48 h-44 bg-[#161d31] p-4 mt-8 rounded-lg shadow-lg shadow-[#101522]">
-                    <img src="https://i.postimg.cc/MG3hVt0H/4zsp-KQ-Logo-Makr.png" className="h-5" />
-                    <p className="text-gray-300 text-sm py-2 font-semibold">Early music release</p>
-                    <p className="text-xs text-white">You will get access to new music releases by an artist before anyone else and will be able to collect them for free.</p>
-                </div>
-                <div className="h-44 w-full sm:w-48 sm:mx-10 bg-[#161d31] p-4 mt-8 rounded-lg shadow-lg shadow-[#101522]">
-                    <img src="https://i.postimg.cc/3NVBps6L/2v-Buzl-Logo-Makr.png" className="h-5" />
-                    <p className="text-gray-300 text-sm py-2 font-semibold">Creative control</p>
-                    <p className="text-xs text-white">When the new music drops, either one of the key holders will get access to pick the song's title or get a limited edition collectable.</p>
-                </div>
-                <div className="h-44 w-full sm:w-48 mx-0 bg-[#161d31] mt-8 p-4 rounded-lg shadow-lg shadow-[#101522]">
-                    <img src="https://i.postimg.cc/c13L18Zw/42-Fx1h-Logo-Makr.png" className="h-5" />
-                    <p className="text-gray-300 text-sm py-2 font-semibold">Sell your keys</p>
-                    <p className="text-xs text-white">The price of keys follows a bonding curve, which means you can sell your key for more if the artist's popularity increases.</p>
-                </div>
-              
-            </div>
-            <div className="border-b-2 border-[#181f35] mt-12"></div>
+           <div className="flex mt-3 flex-wrap items-center justify-center">
+               <div className="w-full sm:w-48 h-44 bg-[#161d31] p-4 mt-8 rounded-lg shadow-lg shadow-[#101522]">
+                   <img src="https://i.postimg.cc/MG3hVt0H/4zsp-KQ-Logo-Makr.png" className="h-5" />
+                   <p className="text-gray-300 text-sm py-2 font-semibold">Early music release</p>
+                   <p className="text-xs text-white">You will get access to new music releases by an artist before anyone else and will be able to collect them for free..</p>
+               </div>
+               <div className="h-44 w-full sm:w-48 sm:mx-10 bg-[#161d31] p-4 mt-8 rounded-lg shadow-lg shadow-[#101522]">
+                   <img src="https://i.postimg.cc/3NVBps6L/2v-Buzl-Logo-Makr.png" className="h-5" />
+                   <p className="text-gray-300 text-sm py-2 font-semibold">Creative control</p>
+                   <p className="text-xs text-white">The artist has the option to give creative control to their key holders and let them pick a title for the next uploaded song..</p>
+               </div>
+               <div className="h-44 w-full sm:w-48 mx-0 bg-[#161d31] mt-8 p-4 rounded-lg shadow-lg shadow-[#101522]">
+                   <img src="https://i.postimg.cc/c13L18Zw/42-Fx1h-Logo-Makr.png" className="h-5" />
+                   <p className="text-gray-300 text-sm py-2 font-semibold">Sell your keys</p>
+                   <p className="text-xs text-white">The price of keys follows a bonding curve, which means you can sell your key for more if the artist's popularity increases.</p>
+               </div>
+             
+           </div></>)}
+           <div className="border-b-2 border-[#181f35] mt-12"></div>
+                    </>
+                )
+            }
+            
             
             {
-                    getMySongs.length > 0 && !profile ? (
+                    getMySongs.length > 0 ? (
                         <div className="pt-6">
-                        {
-                            getMySongs.map((data, index) => {
-                              return (
-                                <div className="pt-6 w-full mt-20 rounded-2xl bg-[#8AD7FF] overflow-scroll h-96 flex flex-col">
-                                <div onClick={() => handlePlayMusic(data.data.song)} key={index} className="w-full hover:bg-[#79d0ff] cursor-pointer justify-between flex items-center py-2">
-                                    <div className="flex items-center ml-5">
-                                      <img src={data.data.signMessage} className="mt-12 sm:mt-0 sm:mr-0 h-16 w-16 rounded-md" />
-                                      <div className="ml-4">
-                                          <p className="font-semibold">{data.data.title} </p>
-                                          <p className="text-xs text-gray-700">{data.data.account}</p>
-                                      </div>
-                                    </div>
-                                    <div className="mr-6 border text-gray-700 border-gray-700 rounded-full p-2 px-6 cursor-pointer hover:bg-gray-700 hover:text-white">Collect</div>
-                                </div>
-                                </div>
-                              );
-                            })
-                          }
+                            <p className="mt-6 text-gray-200 text-2xl font-bold">All songs:</p>
+                             <div className="pt-6 w-full mt-4 rounded-2xl  overflow-scroll h-96 flex flex-col">
+                             {getMySongs.map((data, index) => {
+        const isPlaying = currentlyPlaying.index === data.data.title && currentlyPlaying.isPlaying;
+        return (
+          <div
+            onClick={() => handlePlayMusic(data.data.song, data.data.title)}
+            key={index}
+            className="w-full hover:bg-[#171d33] cursor-pointer justify-between flex items-center py-2 px-1"
+          >
+            <div className="flex items-center ml-0">
+              <img
+                src={data.data.image}
+                className="mt-12 sm:mt-0 sm:mr-0 h-16 w-16 rounded-md"
+              />
+              <div className="ml-4">
+                <p className="font-semibold text-gray-300">{data.data.title}</p>
+                <p className="text-xs text-gray-700">{data.data.account}</p>
+              </div>
+            </div>
+            <div className="flex items-center">
+              <div className="bg-gray-600 w-10 h-10 justify-center items-center flex mr-6 rounded-full">
+                {isPlaying ? (
+                  <img
+                    src="https://i.postimg.cc/hGktpVCT/8-Vjj-E5-Logo-Makr.png"
+                    className="w-3"
+                  />
+                ) : (
+                  <img
+                    src="https://i.postimg.cc/13QDBT4V/5yp68q-Logo-Makr.png"
+                    className="w-3"
+                  />
+                )}
+              </div>
+              {
+                accounts ? (
+                  <div onClick={() => collectMusic(data.data.smartContractAddress)} className="mr-0 border text-gray-600 border-gray-600 rounded-full p-2 px-6 cursor-pointer hover:bg-gray-700 hover:text-white">
+                Collect
+              </div>
+                ) : null
+              }
+              
+            </div>
+          </div>
+        );
+      })}
+                          </div>
                           </div>
                     ) : (
-                        null
+                      <div className="flex items-center justify-center h-96">
+                        <p className="text-[#283152] text-2xl">No current songs</p>
+                      </div>
+                        
                     )
                 }
 
+<div className="border-b-2 border-[#181f35] mt-12"></div>
+<div>
+  {
+    id == "main" ? (
+      null
+    ) : (
+      <div>
+        <p className="text-white mt-16 text-xl font-bold">Key price history</p>
+       <ResponsiveContainer width="100%" height={400} style={{ marginTop: 30 }}>
+      <AreaChart
+        data={datk}
+        margin={{
+          top: 10, right: 30, left: 0, bottom: 0,
+        }}
+      >
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="name" />
+        <YAxis />
+        <Tooltip />
+        <Area type="monotone" dataKey="value" stroke="#8884d8" fill="#8884d8" />
+      </AreaChart>
+    </ResponsiveContainer>
+
+      </div>
+    )
+  }
+</div>
+
+
              <div className="mb-96"></div>
 
-              
+              <div style={{height: 200}}></div>
                     
             
             
