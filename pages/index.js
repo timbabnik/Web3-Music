@@ -5,8 +5,8 @@ import { ethers, BigNumber } from 'ethers';
 import { addDoc, collection, deleteDoc, doc, getDocs, onSnapshot, query, serverTimestamp, orderBy, getDoc } from '@firebase/firestore';
 import { db } from '../firebase';
 import { useRouter } from "next/router";
-import MusicFactory from "./MusicFactory.json";
 import Mutest from "./Mutest.json";
+import MusicFactory from "./MusicFactory.json";
 
 
 function Music() {
@@ -331,7 +331,7 @@ const [back, setBack] = useState(0);
   const router = useRouter();
 
 
-  const addressss = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+  const addressss = "0x2a0644d13BD9154962BD0C669aCFa94861D52BD0";
 
   
   async function testek() {
@@ -375,7 +375,7 @@ const [back, setBack] = useState(0);
       const signer = await provider.getSigner();
       const contract = new ethers.Contract(
         addressss,
-        Mutest.abi,
+        MusicFactory.abi,
         signer
       );
   
@@ -385,24 +385,33 @@ const [back, setBack] = useState(0);
         const getPri = await contract.getBuyPrice(add, 1);
         const priceInEther = getPri.toString();
         console.log("Current keysBalance:", balance.toString());
-        console.log("Current price:", priceInEther.toString());
+        console.log("Current price:", (priceInEther / (10 ** 18)).toString());
 
         const transaction = await contract.buyShares(add, 1, {
           value: priceInEther
         });
 
+        const priceInEtherr = (priceInEther / (10 ** 18)).toString(); 
         
         const receipt = await transaction.wait(); // Wait for the transaction to be mined
         
         console.log("ha?");
             console.log("Transaction confirmed:", receipt.hash);
     
-            if (receipt && receipt.hash && balance.toString() < 1) {
+            if (receipt.hash) {
+              await addDoc(collection(db, "accounts", accounts[0], "history"), {
+                value: priceInEtherr,
+                name: accounts[0].slice(0, 3),
+                buy: true,
+                timestamp: serverTimestamp()
+            })
+
+            if (account[0] !== add) {
               await addDoc(collection(db, "accounts", account[0], "myKeys"), {
                 image: img,
                 address: add
               });
-          
+            }
               // Navigate to /profiles/add
               router.push(`/profiles/${add}`);
         
@@ -474,14 +483,7 @@ const [back, setBack] = useState(0);
         const account = await signer.getAddress();
         setAccount(account);
   
-        const message = titleInput; // Plain text message
-        const hash = ethers.hashMessage(message); // Hash the message if needed
-  
-        const signature = await signer.signMessage(message);
-        console.log('Signed message:', signature);
-        console.log('Hash:', hash);
-        console.log(allMusic[currentIndex].data.address);
-        console.log(accounts[0]);
+        
   
         // Define contract details
         
@@ -489,7 +491,7 @@ const [back, setBack] = useState(0);
         // Create contract instance
         const contract = new ethers.Contract(
           addressss,
-          Mutest.abi,
+          MusicFactory.abi,
           signer
         );
   
@@ -500,6 +502,14 @@ const [back, setBack] = useState(0);
         console.log("Current keysBalance:", balance.toString());
   
         if (balance.toString() > 0) {
+          const message = titleInput; // Plain text message
+        const hash = ethers.hashMessage(message); // Hash the message if needed
+  
+        const signature = await signer.signMessage(message);
+        console.log('Signed message:', signature);
+        console.log('Hash:', hash);
+        console.log(allMusic[currentIndex].data.address);
+        console.log(accounts[0]);
           // Add document to Firestore
           await addDoc(collection(db, "accounts", allMusic[currentIndex].data.artist, "songTitle"), {
             title: titleInput,
@@ -519,6 +529,16 @@ const [back, setBack] = useState(0);
       alert('Please install MetaMask!');
     }
   };
+
+
+  const handleStopMusic = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      setIsPlaying(false);
+    }
+  };
+  
 
 
 const displayTime = `${timeLeft.days || '00'}:${timeLeft.hours || '00'}:${timeLeft.minutes || '00'}:${timeLeft.seconds || '00'}`;
@@ -625,12 +645,13 @@ const displayTime = `${timeLeft.days || '00'}:${timeLeft.hours || '00'}:${timeLe
 
                     
 {allMusic.length > 0 && (
-      <Link href={`/profiles/${allMusic[currentIndex].data.artist}`}>
-        <p className="mt-0">
-        {allMusic[currentIndex].data.artist.length > 6 ? `${allMusic[currentIndex].data.artist.slice(0, 3)}...${allMusic[currentIndex].data.artist.slice(-3)}` : allMusic[currentIndex].data.artist}
-          
-        </p>
-        </Link>
+      <Link href={`/profiles/${allMusic[currentIndex].data.artist}`} onClick={handleStopMusic}>
+      <p className="mt-0">
+        {allMusic[currentIndex].data.artist.length > 6 
+          ? `${allMusic[currentIndex].data.artist.slice(0, 3)}...${allMusic[currentIndex].data.artist.slice(-3)}` 
+          : allMusic[currentIndex].data.artist}
+      </p>
+    </Link>
       )}
 </div>
 </div>

@@ -38,21 +38,21 @@ contract MusicFactory is Ownable {
 
 
 
-    // Create new music collection and send the first edition
+    // Create a new music collection, send the first edition, and choose a suggested music title
 
-    function createMusicCollection(string memory _tokenString ,address _to, string memory _songTitle, bytes memory _signature, address _toZatest) public {
+    function createMusicCollection(string memory _tokenString ,address _to, string memory _songTitle, bytes memory _signature) public {
         require(verifyContract.verify(_to, _songTitle, _signature), "Verification incomplete!");
-        require(keysBalance[msg.sender][_toZatest] > 0, "Sender doesnt hold your key");
+        require(keysBalance[msg.sender][_to] > 0, "Sender doesnt hold your key");
         MusicCollection create = new MusicCollection(msg.sender, address(this), _tokenString, _songTitle, "");
         listOfAllCollections.push(create);
-        listOfAllCollections[numberContracts].sendFirstEdition(_toZatest);
+        listOfAllCollections[numberContracts].sendFirstEdition(_to);
         numberContracts++;
 
         emit MusicCollectionCreated(msg.sender, address(create));
     }
 
 
-    // Create new music collection and send the first edition
+    // Create a new music collection and send the limited edition music NFT
 
     function createMusicCollectionTwo(string memory _tokenString, address _to, string memory _songTitle, string memory _limited) public {
         require(keysBalance[msg.sender][_to] > 0, "Sender doesnt hold your key");

@@ -82,7 +82,7 @@ function Profil() {
     const gifts = [{
         id: 1,
         title: "Title for this song",
-        desc: "Let your collectors name the song you are going to upload. Choose from the best title idea that you are going to get. After that every collector can collect it for free.",
+        desc: "Let your collectors name the song you are going to upload. Choose from the best title idea that you are going to get.",
         first: "https://i.postimg.cc/dQ9qpfTp/5-E62yk-Logo-Makr.png",
         second: "https://i.postimg.cc/c13L18Zw/42-Fx1h-Logo-Makr.png",
         marginRight: 10
@@ -90,8 +90,8 @@ function Profil() {
         id: 2,
         title: "Limited edition",
         desc: "Send one of your collectors a limited edition collectable NFT of the uploaded song. After that every collector can collect the basic version for free.",
-        first: "https://i.postimg.cc/j2WTCyTf/1-Bf3-Am-Logo-Makr.png",
-        second: "https://i.postimg.cc/FHztR2c8/5g-Wsnx-Logo-Makr.png",
+        first: "https://files.logomakr.com/43IKPg-LogoMakr.png",
+        second: "https://files.logomakr.com/4ClEqp-LogoMakr.png",
         marginLeft: 10
     }]
 
@@ -489,6 +489,35 @@ const [getCountdown, setGetCountdown] = useState([]);
 const [getSongTitle, setGetSongTitle] = useState([]);
 const [getMySongs, setGetMySongs] = useState([]);
 
+const [allwhitelist, setAllwhitelist] = useState([]);
+
+  useEffect(
+    () => 
+    onSnapshot(collection(db, "whitelist"),
+    
+    (snapshot) => setAllwhitelist(snapshot.docs.map((doc) => ({
+        id: doc.id,
+        data: doc.data(),
+    }))))
+
+, [])
+
+const whitelistCheckerTest = () => {
+  let isOnWhitelist = false; // Initialize a flag variable
+
+  for (let i = 0; i < allwhitelist.length ; i++) {
+    if (allwhitelist[i].data.address.toUpperCase() === accounts[0].toUpperCase()) {
+      openUploadSong();
+      isOnWhitelist = true; // Set the flag to true if your account is on the whitelist
+      break; // Exit the loop since you found a match
+    }
+  }
+
+  if (!isOnWhitelist) {
+    alert("You are not on the whitelist");
+  }
+}
+
 
 
 useEffect(() => {
@@ -744,8 +773,8 @@ const getAndSelectTitle = (id, addresss, signaturee, idTwo) => {
 
 const imageObjectTitle = {
   name: selectTitle,
-  image: getCountdown[0]?.imageUrl,
-  animation_url: getCountdown[0]?.song,
+  image: getCountdown[0]?.data.imageUrl,
+  animation_url: getCountdown[0]?.data.song,
 }
 
 const testChooseTitleandsend = async () => {
@@ -758,77 +787,90 @@ const testChooseTitleandsend = async () => {
 }
 
 
+async function verifyContract(address, constructorArguments) {
+  try {
+      await window.hardhat.run("verify:verify", {
+          address,
+          constructorArguments,
+      });
+      console.log(`Contract at ${address} verified successfully!`);
+  } catch (error) {
+      console.error(`Failed to verify contract at ${address}:`, error);
+  }
+}
+
+
+const verifyTest = async () => {
+  await verifyContract(0x6b537DE41E501E6d2a93B5B31E889b1B704ad80C, [0x1B8163f3f7Ae29AF06c50dF4AE5E0Fe9375f8496, 0x2a0644d13BD9154962BD0C669aCFa94861D52BD0, "https://timomarket.infura-ipfs.io/ipfs/QmbNdXSauw1bRGbdeP44jFQZ66xT4MaaL5UsbiqPBLHXDZ", "Test idea title 17:16", "https://timomarket.infura-ipfs.io/ipfs/QmbNdXSauw1bRGbdeP44jFQZ66xT4MaaL5UsbiqPBLHXDZ"]);
+}
+
 async function chooseTitlesendTest() {
   console.log("jou");
   if (window.ethereum) {
-    const account = await window.ethereum.request({
-      method: "eth_requestAccounts",
-    });
+      const account = await window.ethereum.request({
+          method: "eth_requestAccounts",
+      });
 
-    setAccounts(account);
+      setAccounts(account);
 
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
-    const contract = new ethers.Contract(
-      addressss,
-      MusicFactory.abi,
-      signer
-    );
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const contract = new ethers.Contract(
+          addressss,
+          MusicFactory.abi,
+          signer
+      );
 
-    try {
-      const result = await ipfs.add(JSON.stringify(imageObjectTitle));
-      const balance = await contract.keysSupply(id);
+      try {
+          const result = await ipfs.add(JSON.stringify(imageObjectTitle));
+          const balance = await contract.keysSupply(id);
 
-      if (result) {
-        if (balance.toString() > 0) {
-          // Listen for the event before sending the transaction
-          contract.on('MusicCollectionCreated', async (creator, collectionAddress) => {
-            console.log(`New music collection created by ${creator}, address: ${collectionAddress}`);
-  
-            await addDoc(collection(db, "accounts", accounts[0], "mySongs"), {
-              image: getCountdown[0].data.imageUrl,
-              title: getCountdown[0].data.title,
-              song: getCountdown[0].data.song,
-              smartContractAddress: collectionAddress
-            });
-  
-            // Remove the event listener after receiving the event
-            contract.off('MusicCollectionCreated');
-          });
-        const transaction = await contract.createMusicCollection(`https://timomarket.infura-ipfs.io/ipfs/${result.path}`, selectAddress, selectTitle, selectSignature);
-        const receipt = await transaction.wait();
+          if (result) {
+              if (balance.toString() > 0) {
+                  // Listen for the event before sending the transaction
+                  contract.on('MusicCollectionCreated', async (creator, collectionAddress) => {
+                      console.log(`New music collection created by ${creator}, address: ${collectionAddress}`);
+                      console.log(`https://timomarket.infura-ipfs.io/ipfs/${result.path}`)
+                      // Verify the newly created contract
+                      
+                    await verifyContract(collectionAddress, [accounts[0], 0x2a0644d13BD9154962BD0C669aCFa94861D52BD0, `https://timomarket.infura-ipfs.io/ipfs/${result.path}`, selectTitle, ""]);
 
-        if (receipt && receipt.hash) {
-          chooseTitleAndSenddd();
+                      // Add document to Firestore
+                      await addDoc(collection(db, "accounts", accounts[0], "mySongs"), {
+                          image: getCountdown[0].data.imageUrl,
+                          title: selectTitle,
+                          song: getCountdown[0].data.song,
+                          smartContractAddress: collectionAddress
+                      });
 
-      }
+                      // Remove the event listener after receiving the event
+                      contract.off('MusicCollectionCreated');
+                  });
 
-       // Wait for the transaction to be mined
-      
-      
+                  const transaction = await contract.createMusicCollection(`https://timomarket.infura-ipfs.io/ipfs/${result.path}`, selectAddress, selectTitle, selectSignature);
+                  const receipt = await transaction.wait();
+                  console.log(`https://timomarket.infura-ipfs.io/ipfs/${result.path}`)
+                  console.log(receipt, receipt.hash, "lalalalalalla");
 
+                  if (receipt && receipt.hash) {
+                      chooseTitleAndSenddd();
+                  }
 
-          
-  
-          
-           
-        
-            // Navigate to /profiles/add
-            router.push(`/profiles/${id}`);
-      
-        
-            alert("You have bought this artist's key");
-          } else {
-            console.log("You already have");
+                  // Navigate to /profiles/add
+                  router.push(`/profiles/${id}`);
+
+                  alert("You have uploaded your song for your key holders to collect.");
+                  setChooseTitle(false);
+              } else {
+                  console.log("You already have");
+              }
           }
-        }
-
-
-    } catch (err) {
-      console.log("error: ", err);
-    }
+      } catch (err) {
+          console.log("error: ", err);
+      }
   }
 }
+
 
 
 const chooseTitleAndSend = async () => {
@@ -964,7 +1006,7 @@ async function deleteLimitedCountdownn(idOf, jsonTit, address, song, jsonLim) {
     const signer = await provider.getSigner();
     const contract = new ethers.Contract(
       addressss,
-      Mutest.abi,
+      MusicFactory.abi,
       signer
     );
 
@@ -1072,14 +1114,7 @@ const sendTitlee = async () => {
         const account = await signer.getAddress();
         setAccount(account);
   
-        const message = titleInput; // Plain text message
-        const hash = ethers.hashMessage(message); // Hash the message if needed
-  
-        const signature = await signer.signMessage(message);
-        console.log('Signed message:', signature);
-        console.log('Hash:', hash);
         
-        console.log(accounts[0]);
   
         // Define contract details
         
@@ -1087,7 +1122,7 @@ const sendTitlee = async () => {
         // Create contract instance
         const contract = new ethers.Contract(
           addressss,
-          Mutest.abi,
+          MusicFactory.abi,
           signer
         );
   
@@ -1097,6 +1132,14 @@ const sendTitlee = async () => {
         console.log("Current keysBalance:", balance.toString());
   
         if (balance.toString() > 0) {
+          const message = titleInput; // Plain text message
+        const hash = ethers.hashMessage(message); // Hash the message if needed
+  
+        const signature = await signer.signMessage(message);
+        console.log('Signed message:', signature);
+        console.log('Hash:', hash);
+        
+        console.log(accounts[0]);
           // Add document to Firestore
           await addDoc(collection(db, "accounts", id, "songTitle"), {
             title: titleInput,
@@ -1127,7 +1170,7 @@ const sendTitlee = async () => {
   }
 
 
-  const addressss = "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1";
+  const addressss = "0x2a0644d13BD9154962BD0C669aCFa94861D52BD0";
 
   async function collectKey() {
     console.log("jou");
@@ -1142,7 +1185,7 @@ const sendTitlee = async () => {
       const signer = await provider.getSigner();
       const contract = new ethers.Contract(
         addressss,
-        Mutest.abi,
+        MusicFactory.abi,
         signer
       );
   
@@ -1182,7 +1225,7 @@ const sendTitlee = async () => {
                 timestamp: serverTimestamp()
             })
 
-            
+
               await addDoc(collection(db, "accounts", accounts[0], "myKeys"), {
                 image: getCountdown[0].data.imageUrl,
                 address: id
@@ -1289,7 +1332,7 @@ const sendTitlee = async () => {
 
             await addDoc(collection(db, "accounts", accounts[0], "history"), {
               value: priceInEther.toString(),
-              name: accounts[0],
+              name: accounts[0].slice(0, 3),
               buy: false,
               timestamp: serverTimestamp()
           })
@@ -1318,7 +1361,7 @@ const sendTitlee = async () => {
 
   const addsre = "0xa16E02E87b7454126E5E10d957A927A7F5B5d2be";
 
-  const providerrr = new ethers.JsonRpcProvider("http://127.0.0.1:8545/");
+  const providerrr = new ethers.JsonRpcProvider("https://eth-sepolia.g.alchemy.com/v2/FRb74Y_n6MGovvwsUX1yc3-baC3Lb9iT");
 
   const contractAward = new ethers.Contract(addressss, MusicFactory.abi, providerrr); 
   const contractAwardd = new ethers.Contract(addsre, MusicCollection.abi, providerrr); 
@@ -1427,7 +1470,7 @@ useEffect(() => {
 
 const openUploadSong = () => {
   if (keyNumber > 0) {
-    setUpload(true);
+    setUploadSong(true);
   } else {
     alert("You have to be the first one to collect your key for others to do the same. Collect your key below and come back :)")
   }
@@ -1562,10 +1605,12 @@ const openUploadSong = () => {
             <div style={{backgroundColor: "#121728", paddingTop: 30, paddingLeft: 30, paddingRight: 30}} className={styles.modalcontentt}>
             <div className="p-0 w-full relative">
     <div className="flex items-center">
-        <img src="https://i.postimg.cc/7LY02nX5/9098818-Coop-Records-Headshot.webp" className="h-20 rounded-lg" />
+    <div className="h-20 w-20 rounded-lg bg-gradient-to-br from-blue-300 to-blue-700"></div>
+
+
         <div className="ml-5">
-            <p className="text-white text-sm font-bold">Timoo fsadfa</p>
-            <p className="text-gray-300 text-xs mt-1">0x324...fas3</p>
+            <p className="text-white text-sm font-bold">Your address</p>
+            <p className="text-gray-300 text-xs mt-1">{accounts[0].slice(0, 4)}...{accounts[0].slice(-4)}</p>
         </div>
     </div>
     <div className="border-b-2 border-[#181f35] mt-8 w-full"></div>
@@ -1573,9 +1618,9 @@ const openUploadSong = () => {
         {gifts.map((data, index) => {
             return (
                 <div onClick={() => selectGift(data.title, data.desc, data.second)} key={index} style={{marginLeft: data.marginLeft, marginRight: data.marginRight}} className={`h-44 mx-0 w-1/2 cursor-pointer ${selected.title == data.title ? "border" : null}  border-blue-300 bg-[#161d31] p-4 mt-8 rounded-lg shadow-lg shadow-[#101522]`}>
-                    <img src={` ${selected.title == data.title ? data.first : data.second}`} className="h-5" />
+                    <img src={` ${selected.title == data.title ? data.first : data.second}`} className="h-7" />
                     <p className={`${selected.title == data.title ? "text-blue-300" : "text-white"} text-sm py-2 font-semibold`}>{data.title}</p>
-                    <p className={`${selected.title == data.title ? "text-blue-300" : "text-white"} text-xs`}>This artist has created a royalty treasure for one or more of their earnings with them.</p>
+                    <p className={`${selected.title == data.title ? "text-blue-300" : "text-white"} text-xs`}>{data.desc}</p>
                 </div>
             );
         })}
@@ -1695,7 +1740,7 @@ const openUploadSong = () => {
     {gifts.map((data, index) => {
             return (
                 <div onClick={() => selectGift(data.title, data.desc, data.second)} key={index} style={{marginLeft: data.marginLeft, marginRight: data.marginRight}} className={`mx-0 h-40 w-1/2 cursor-pointer ${selected.title == data.title ? "border" : null}  border-blue-300 bg-[#161d31] p-4 mt-8 rounded-lg shadow-lg shadow-[#101522]`}>
-                    
+                    <img src={` ${selected.title == data.title ? data.first : data.second}`} className="h-5" />
                     <p className={`${selected.title == data.title ? "text-blue-300" : "text-white"} text-sm py-2 font-semibold`}>{data.title}</p>
                     <p className={`${selected.title == data.title ? "text-blue-300" : "text-white"} text-xs`}>{data.desc}</p>
                 </div>
@@ -1711,6 +1756,7 @@ const openUploadSong = () => {
                 <div className="">
                   <p className="text-white text-base">Avatar</p>
                   <p className="text-xs text-gray-300" style={{ width: 200 }}>Choose an image for your collectable NFT music.</p>
+                  <p className="text-xs text-gray-300" style={{ width: 200, marginTop: 10, color: "lightgray" }}>(Max 2MB)</p>
                 </div>
                 <div
                 className="w-full ml-4 p-2 rounded-lg bg-[#1d212b] hover:bg-[#242936] justify-center items-center flex cursor-pointer relative"
@@ -1792,10 +1838,11 @@ const openUploadSong = () => {
                 <div className="">
                   <p className="text-white text-base">Avatar</p>
                   <p className="text-xs text-gray-300" style={{ width: 200 }}>Choose an image for your collectable NFT music.</p>
+                  <p className="text-xs text-gray-300" style={{ width: 200, marginTop: 10, color: "lightgray" }}>(Max 2MB)</p>
                 </div>
                 <div
                 className="w-full ml-4 p-2 rounded-lg bg-[#1d212b] hover:bg-[#242936] justify-center items-center flex cursor-pointer relative"
-                style={{ height: 200 }}
+                style={{ height: 150 }}
                 onClick={handleAvatarContainerClick}
               >
                 {avatarUrl ? (
@@ -1821,7 +1868,7 @@ const openUploadSong = () => {
               </div>
               <div
                 className="w-full ml-4 p-2 rounded-lg bg-[#1d212b] hover:bg-[#242936] justify-center items-center flex cursor-pointer relative"
-                style={{ height: 200 }}
+                style={{ height: 150 }}
                 onClick={handleAvatarContainerClickTwo}
               >
                 {avatarUrlTwo ? (
@@ -2247,7 +2294,7 @@ const openUploadSong = () => {
                                 </>
                             ) : (
                                 <>
-                                {data.data.limited ? "Get a chance to get a free limited edition collectable of this song." : "Best idea for a title will be chosen by an artist. A person who´s title will be chosen will also get a one-of-one limited edition NFT of a song."}
+                                {data.data.limited ? "Get a chance to get a free limited edition collectable of this song." : "Best idea for a title will be chosen by an artist."}
                                 </>
                             )
                         }
@@ -2259,7 +2306,7 @@ const openUploadSong = () => {
 
                     {
                         accounts[0] == id ? (
-                            <p onClick={() => console.log(getCountdown[0].data.timestamp.seconds)} className="mt-0">{data.data.limited ? "The song drops in:" : "Title ideas"}</p>
+                            <p onClick={() => console.log(imageObjectTitle)} className="mt-0">{data.data.limited ? "The song drops in:" : "Title ideas"}</p>
                         ) : (
                             <p onClick={() => console.log(getCountdown[0].data.timestamp.seconds)} className="mt-0">{data.data.limited ? "The song drops in:" : <span>{id.slice(0, 3)}...{id.slice(id.length - 4)}</span>}</p>
                         )
@@ -2450,12 +2497,12 @@ const openUploadSong = () => {
                         accounts[0] == id ? (
 <div className=" py-10 mt-0 w-full h-96 rounded-2xl bg-gradient-to-b from-[#00A3FF] to-[#8AD7FF] justify-center items-center flex flex-col sm:flex-row">
                  <div className="flex items-center">
-                    <div onClick={openUploadSong} className="w-28 h-28 bg-white cursor-pointer hover:w-32 hover:h-32 transition-all rounded-full ml-0 sm:ml-0 justify-center items-center flex">
+                    <div onClick={whitelistCheckerTest} className="w-28 h-28 bg-white cursor-pointer hover:w-32 hover:h-32 transition-all rounded-full ml-0 sm:ml-0 justify-center items-center flex">
 
                         <img src="https://i.postimg.cc/L4r9HYLW/9-F7k-KO-Logo-Makr.png" className="w-12" />
                     </div>
                     <div className="ml-6 py-10">
-                        <p className="font-bold text-2xl">UPLOAD NEW SONG</p>
+                        <p onClick={verifyTest} className="font-bold text-2xl">UPLOAD NEW SONG</p>
                         <div className="flex items-center">
                             <p className="text-xs font-light w-48 mt-1">Let your key holders collect your music, send limited editions and give creative control.</p>
                             

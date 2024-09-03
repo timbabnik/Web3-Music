@@ -6,7 +6,7 @@ async function main() {
   console.log("Deploying contracts with the account:", deployer.address);
 
   // Replace this line with the actual address of your deployed Verify contract
-  const verifyContractAddress = "0x610178dA211FEF7D417bC0e6FeD39F05609AD788"; // Replace with the actual address
+  const verifyContractAddress = "0x4531b410189723d8789E662B20658B14eab859c6"; // Replace with the actual address
 
   // Deploy MusicFactory contract with the Verify contract address
   const MusicFactory = await ethers.getContractFactory("MusicFactory");
@@ -15,9 +15,9 @@ async function main() {
   console.log("Deploying MusicFactory...");
 
   // Wait for the contract to be mined and get the deployed address
-  await musicFactory.deployed();
+  await musicFactory.waitForDeployment();
 
-  console.log("MusicFactory contract deployed to:", musicFactory.address);
+  console.log("MusicFactory contract deployed to:", musicFactory.target);
   console.log("Deployment completed successfully!");
 }
 
