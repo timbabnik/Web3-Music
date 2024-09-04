@@ -937,7 +937,7 @@ const chooseTitleAndSenddd = async () => {
       console.log("Document deleted successfully.");
 
       // Check if getCountdown[0] exists and has required fields
-      if (!getCountdown[0] || !getCountdown[0].data || !getCountdown[0].data.image || !getCountdown[0].data.songUrl) {
+      if (!getCountdown[0] || !getCountdown[0].data || !getCountdown[0].data.imageUrl || !getCountdown[0].data.song) {
           throw new Error("Missing data in getCountdown[0]");
       }
 
