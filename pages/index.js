@@ -331,7 +331,7 @@ const [back, setBack] = useState(0);
   const router = useRouter();
 
 
-  const addressss = "0x2a0644d13BD9154962BD0C669aCFa94861D52BD0";
+  const addressss = "0x4d4DdfB01DAa677a04d5c5278A6075A4cf7d804b";
 
   
   async function testek() {
@@ -365,6 +365,17 @@ const [back, setBack] = useState(0);
   async function collectSmartContract(img, add) {
     console.log("jou");
     if (window.ethereum) {
+      
+      const chainId = await window.ethereum.request({ method: "eth_chainId" });
+      
+      // Check if it's not Base Sepolia (chain ID 84532 in decimal)
+      if (parseInt(chainId, 16) !== 8453) { // Convert chainId to decimal for comparison
+        alert("Please switch to the Base network.");
+        return; // Exit the function early if the network is incorrect
+      }
+
+
+
       const account = await window.ethereum.request({
         method: "eth_requestAccounts",
       });
@@ -386,6 +397,7 @@ const [back, setBack] = useState(0);
         const priceInEther = getPri.toString();
         console.log("Current keysBalance:", balance.toString());
         console.log("Current price:", (priceInEther / (10 ** 18)).toString());
+        console.log(account[0].slice(0, 3))
 
         const transaction = await contract.buyShares(add, 1, {
           value: priceInEther
@@ -399,14 +411,14 @@ const [back, setBack] = useState(0);
             console.log("Transaction confirmed:", receipt.hash);
     
             if (receipt.hash) {
-              await addDoc(collection(db, "accounts", accounts[0], "history"), {
+              await addDoc(collection(db, "accounts", account[0], "history"), {
                 value: priceInEtherr,
-                name: accounts[0].slice(0, 3),
+                name: account[0].slice(0, 3),
                 buy: true,
                 timestamp: serverTimestamp()
             })
 
-            if (account[0] !== add) {
+            if (account[0] !== add && balance.toString() < 1) {
               await addDoc(collection(db, "accounts", account[0], "myKeys"), {
                 image: img,
                 address: add
@@ -469,6 +481,13 @@ const [back, setBack] = useState(0);
 
   const sendTitle = async () => {
     if (window.ethereum) {
+      const chainId = await window.ethereum.request({ method: "eth_chainId" });
+      
+      // Check if it's not Base Sepolia (chain ID 84532 in decimal)
+      if (parseInt(chainId, 16) !== 8453) { // Convert chainId to decimal for comparison
+        alert("Please switch to the Base network.");
+        return; // Exit the function early if the network is incorrect
+      }
       try {
         // Request account access if needed
         const accounts = await window.ethereum.request({
@@ -552,7 +571,7 @@ const displayTime = `${timeLeft.days || '00'}:${timeLeft.hours || '00'}:${timeLe
             <div className="text-sm" style={{ fontFamily: 'Reddit Mono' }}>Upload music</div>
         </div>
         </Link>
-        <div onClick={testek} style={{ fontFamily: 'Reddit Mono' }} className="mt-24 text-white text-3xl">Discover new artists</div>
+        <div style={{ fontFamily: 'Reddit Mono' }} className="mt-24 text-white text-3xl">Discover new artists</div>
         <img src="https://i.postimg.cc/15y4pXbG/Group-1-1.png" className="h-12 absolute left-5 top-5 cursor-pointer" />
        {/* <div className="hidden sm:flex mt-4 overflow-x-auto">
             <img src="https://i.postimg.cc/7LY02nX5/9098818-Coop-Records-Headshot.webp" className="h-14 w-14 border border-white rounded-full mx-2" />

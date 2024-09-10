@@ -83,8 +83,8 @@ function Profil() {
         id: 1,
         title: "Title for this song",
         desc: "Let your collectors name the song you are going to upload. Choose from the best title idea that you are going to get.",
-        first: "https://i.postimg.cc/dQ9qpfTp/5-E62yk-Logo-Makr.png",
-        second: "https://i.postimg.cc/c13L18Zw/42-Fx1h-Logo-Makr.png",
+        second: "https://files.logomakr.com/0blpbd-LogoMakr.png",
+        first: "https://files.logomakr.com/2TMVIT-LogoMakr.png",
         marginRight: 10
     }, {
         id: 2,
@@ -807,6 +807,15 @@ const verifyTest = async () => {
 async function chooseTitlesendTest() {
   console.log("jou");
   if (window.ethereum) {
+
+    const chainId = await window.ethereum.request({ method: "eth_chainId" });
+      
+      // Check if it's not Base Sepolia (chain ID 84532 in decimal)
+      if (parseInt(chainId, 16) !== 8453) { // Convert chainId to decimal for comparison
+        alert("Please switch to the Base network.");
+        return; // Exit the function early if the network is incorrect
+      }
+    
       const account = await window.ethereum.request({
           method: "eth_requestAccounts",
       });
@@ -833,7 +842,7 @@ async function chooseTitlesendTest() {
                       console.log(`https://timomarket.infura-ipfs.io/ipfs/${result.path}`)
                       // Verify the newly created contract
                       
-                    await verifyContract(collectionAddress, [accounts[0], 0x2a0644d13BD9154962BD0C669aCFa94861D52BD0, `https://timomarket.infura-ipfs.io/ipfs/${result.path}`, selectTitle, ""]);
+                    await verifyContract(collectionAddress, [accounts[0], 0x4d4DdfB01DAa677a04d5c5278A6075A4cf7d804b, `https://timomarket.infura-ipfs.io/ipfs/${result.path}`, selectTitle, ""]);
 
                       // Add document to Firestore
                       await addDoc(collection(db, "accounts", accounts[0], "mySongs"), {
@@ -996,6 +1005,15 @@ const deleteLimitedCountdown = async (idOf) => {
 async function deleteLimitedCountdownn(idOf, jsonTit, address, song, jsonLim) {
   console.log("jou");
   if (window.ethereum) {
+
+    const chainId = await window.ethereum.request({ method: "eth_chainId" });
+      
+      // Check if it's not Base Sepolia (chain ID 84532 in decimal)
+      if (parseInt(chainId, 16) !== 8453) { // Convert chainId to decimal for comparison
+        alert("Please switch to the Base network.");
+        return; // Exit the function early if the network is incorrect
+      }
+
     const account = await window.ethereum.request({
       method: "eth_requestAccounts",
     });
@@ -1100,6 +1118,15 @@ const sendTitlee = async () => {
 
   const sendTitle = async () => {
     if (window.ethereum) {
+
+      const chainId = await window.ethereum.request({ method: "eth_chainId" });
+      
+      // Check if it's not Base Sepolia (chain ID 84532 in decimal)
+      if (parseInt(chainId, 16) !== 8453) { // Convert chainId to decimal for comparison
+        alert("Please switch to the Base Sepolia network.");
+        return; // Exit the function early if the network is incorrect
+      }
+
       try {
         // Request account access if needed
         const accounts = await window.ethereum.request({
@@ -1170,11 +1197,20 @@ const sendTitlee = async () => {
   }
 
 
-  const addressss = "0x2a0644d13BD9154962BD0C669aCFa94861D52BD0";
+  const addressss = "0x4d4DdfB01DAa677a04d5c5278A6075A4cf7d804b";
 
   async function collectKey() {
     console.log("jou");
     if (window.ethereum) {
+
+      const chainId = await window.ethereum.request({ method: "eth_chainId" });
+      
+      // Check if it's not Base Sepolia (chain ID 84532 in decimal)
+      if (parseInt(chainId, 16) !== 8453) { // Convert chainId to decimal for comparison
+        alert("Please switch to the Base Sepolia network.");
+        return; // Exit the function early if the network is incorrect
+      }
+
       const account = await window.ethereum.request({
         method: "eth_requestAccounts",
       });
@@ -1204,6 +1240,8 @@ const sendTitlee = async () => {
         console.log("Current keysBalance:", balance.toString());
         console.log("Current price:", priceInEther.toString());
         console.log("Current priceeee:", ethers.formatUnits(priceInEther, "ether"));
+        console.log(account[0].slice(0, 3));
+        console.log(getCountdown[0]?.data?.imageUrl, "Is it working=?");
 
         const transaction = await contract.buyShares(id, 1, {
           value: priceInEther
@@ -1217,17 +1255,19 @@ const sendTitlee = async () => {
             
 
     
-            if (receipt && receipt.hash && balance.toString() < 1) {
-              await addDoc(collection(db, "accounts", accounts[0], "history"), {
+            if (receipt.hash) {
+              await addDoc(collection(db, "accounts", id, "history"), {
                 value: ethers.formatUnits(priceInEther, "ether"),
-                name: accounts[0].slice(0, 3),
+                name: account[0].slice(0, 3),
                 buy: true,
                 timestamp: serverTimestamp()
             })
 
+            console.log("Hej")
 
-              await addDoc(collection(db, "accounts", accounts[0], "myKeys"), {
-                image: getCountdown[0].data.imageUrl,
+            if (account[0] !== id && balance.toString() < 1)
+              await addDoc(collection(db, "accounts", account[0], "myKeys"), {
+                image: getCountdown[0]?.data?.imageUrl || "https://www.svgrepo.com/show/384674/account-avatar-profile-user-11.svg", 
                 address: id
             })
           
@@ -1253,6 +1293,16 @@ const sendTitlee = async () => {
   async function collectMusic(smartcontract) {
     console.log("jou");
     if (window.ethereum) {
+
+
+      const chainId = await window.ethereum.request({ method: "eth_chainId" });
+      
+      // Check if it's not Base Sepolia (chain ID 84532 in decimal)
+      if (parseInt(chainId, 16) !== 8453) { // Convert chainId to decimal for comparison
+        alert("Please switch to the Base Sepolia network.");
+        return; // Exit the function early if the network is incorrect
+      }
+
       const account = await window.ethereum.request({
         method: "eth_requestAccounts",
       });
@@ -1303,6 +1353,16 @@ const sendTitlee = async () => {
   async function deleteKey() {
     console.log("jou");
     if (window.ethereum) {
+
+
+      const chainId = await window.ethereum.request({ method: "eth_chainId" });
+      
+      // Check if it's not Base Sepolia (chain ID 84532 in decimal)
+      if (parseInt(chainId, 16) !== 8453) { // Convert chainId to decimal for comparison
+        alert("Please switch to the Base Sepolia network.");
+        return; // Exit the function early if the network is incorrect
+      }
+
       const account = await window.ethereum.request({
         method: "eth_requestAccounts",
       });
@@ -1330,12 +1390,14 @@ const sendTitlee = async () => {
         console.log("ha?");
             console.log("Transaction confirmed:", receipt.hash);
 
-            await addDoc(collection(db, "accounts", accounts[0], "history"), {
+            await addDoc(collection(db, "accounts", id, "history"), {
               value: priceInEther.toString(),
               name: accounts[0].slice(0, 3),
               buy: false,
               timestamp: serverTimestamp()
           })
+
+          alert("You have sold this artist's key");
     
             if (receipt && receipt.hash && balance.toString() == 1) {
               await deleteDoc(doc(db, "accounts", accounts[0], "myKeys", getAddTwo));
@@ -1345,7 +1407,7 @@ const sendTitlee = async () => {
               router.push(`/profiles/${id}`);
         
           
-              alert("You have bought this artist's key");
+              alert("You have sold this artist's key");
             } else {
               console.log("You already have");
             }
@@ -1361,7 +1423,7 @@ const sendTitlee = async () => {
 
   const addsre = "0xa16E02E87b7454126E5E10d957A927A7F5B5d2be";
 
-  const providerrr = new ethers.JsonRpcProvider("https://eth-sepolia.g.alchemy.com/v2/FRb74Y_n6MGovvwsUX1yc3-baC3Lb9iT");
+  const providerrr = new ethers.JsonRpcProvider("https://base-mainnet.g.alchemy.com/v2/FRb74Y_n6MGovvwsUX1yc3-baC3Lb9iT");
 
   const contractAward = new ethers.Contract(addressss, MusicFactory.abi, providerrr); 
   const contractAwardd = new ethers.Contract(addsre, MusicCollection.abi, providerrr); 
@@ -1855,7 +1917,7 @@ const openUploadSong = () => {
                 ) : (
                   <div className="flex flex-col justify-center items-center">
                     <img src="https://i.postimg.cc/cHbr8k9B/7-Ap6nq-Logo-Makr.png" className="h-6 rounded-lg" alt="Upload" />
-                    <p className="text-center text-white text-xs mt-2">Limited edition avatar</p>
+                    <p className="text-center text-white text-xs mt-2">Basic version</p>
                   </div>
                 )}
                 <input
@@ -1881,7 +1943,7 @@ const openUploadSong = () => {
                 ) : (
                   <div className="flex flex-col justify-center items-center">
                     <img src="https://i.postimg.cc/cHbr8k9B/7-Ap6nq-Logo-Makr.png" className="h-6 rounded-lg" alt="Upload" />
-                    <p className="text-center text-white text-xs mt-2">Basic version</p>
+                    <p className="text-center text-white text-xs mt-2">Limited edition avatar</p>
                   </div>
                 )}
                 <input

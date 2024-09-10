@@ -6,7 +6,7 @@ async function main() {
   console.log("Deploying contracts with the account:", deployer.address);
 
   // Replace this line with the actual address of your deployed Verify contract
-  const verifyContractAddress = "0x4531b410189723d8789E662B20658B14eab859c6"; // Replace with the actual address
+  const verifyContractAddress = "0x7A6E0A33D538BD0bb44bD3F142C5A35B50319da0"; // Replace with the actual address
 
   // Deploy MusicFactory contract with the Verify contract address
   const MusicFactory = await ethers.getContractFactory("MusicFactory");
