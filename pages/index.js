@@ -712,7 +712,7 @@ const displayTime = `${timeLeft.days || '00'}:${timeLeft.hours || '00'}:${timeLe
             
             <div className="relative group w-full sm:w-full sm:mx-0  p-0 rounded-lg border mt-10 sm:mt-0 cursor-pointer">
                     <div className="absolute bottom-full mb-2 bg-black rounded-lg text-white text-xs p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-out hidden group-hover:block">
-                    {allMusic[currentIndex]?.data?.title ? "The artist will review all the title suggestions and choose the best one. A person whose title is chosen will receive credit and a collectible music NFT." : "Get a chance to get a free limited edition collectable of this song."}
+                    {allMusic[currentIndex]?.data?.title ? "The artist will review all the title suggestions and choose the best one. A person whose title is chosen will receive the first collectible music NFT of that collection." : "Get a chance to get a free limited edition collectable of this song."}
                     </div>
                     <div className="px-3 pt-2">
                         <div className="flex items-center">
@@ -745,7 +745,7 @@ const displayTime = `${timeLeft.days || '00'}:${timeLeft.hours || '00'}:${timeLe
                 <>
                   <div className="flex items-center mt-2">
                         
-                  <p className="text-white text-xs sm:text-lg font-semibold mt-1 ml-2">Listen to this song, give it a title, and be a part of the next big hit.</p>
+                  <p className="text-white text-xs sm:text-lg font-semibold mt-1 ml-2">Listen to this song, give it a title, and become a part of the next big hit.</p>
                   
                   </div>
             
