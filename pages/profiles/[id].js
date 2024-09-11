@@ -519,6 +519,7 @@ const whitelistCheckerTest = () => {
 }
 
 
+const [testRefresh, setTestRefresh] = useState(false);
 
 useEffect(() => {
 
@@ -538,7 +539,7 @@ useEffect(() => {
       fetchData();
     }
     
-  }, [id])
+  }, [id, testRefresh])
 
 
   useEffect(() => {
@@ -592,6 +593,10 @@ useEffect(() => {
 
 
 const addIpfs = async () => {
+  if (!avatarUrl || !songUrl) {
+    alert("One or more required fields are missing. Please ensure all fields are filled.");
+    return; // Exit the function if any field is missing
+  }
     await addDoc(collection(db, "accounts", accounts[0], "countdown"), {
       imageUrl: avatarUrl,
       song: songUrl,
@@ -606,6 +611,12 @@ const addIpfs = async () => {
 
 
 const addLimited = async () => {
+  // Check if any required fields are missing
+  if (!imageObject || !imageObjectTwo || !avatarUrl || !avatarUrlTwo || !songUrl || !spotifyLink) {
+    alert("One or more required fields are missing. Please ensure all fields are filled.");
+    return; // Exit the function if any field is missing
+  }
+
   if (getCountdown.length > 0) {
     alert("jou");
   } else {
@@ -627,15 +638,15 @@ const addLimited = async () => {
       });
   
       console.log("Document added with timestamp");
+      setTestRefresh(!testRefresh);
       alert("You uploaded your song");
       setUploadSong(false);
-      set
     } catch (error) {
       console.error("Error adding document: ", error);
     }
   }
-  
 };
+
 
 
 
@@ -1319,6 +1330,7 @@ const sendTitlee = async () => {
               await addDoc(collection(db, "accounts", id, "history"), {
                 value: ethers.formatUnits(priceInEther, "ether"),
                 name: account[0].slice(0, 3),
+                address: accounts[0],
                 buy: true,
                 timestamp: serverTimestamp()
             })
@@ -1387,7 +1399,7 @@ const sendTitlee = async () => {
             console.log("Transaction confirmed:", receipt.hash);
     
             if (receipt && receipt.hash) {
-              alert("You have bought this artist's music");
+              alert("You have bought this artist's music. Check it on Opensea.");
           
             
           
@@ -1450,14 +1462,18 @@ const sendTitlee = async () => {
         console.log("ha?");
             console.log("Transaction confirmed:", receipt.hash);
 
+            if(receipt.hash) {
+
             await addDoc(collection(db, "accounts", id, "history"), {
               value: priceInEther.toString(),
-              name: accounts[0].slice(0, 3),
+              name: account[0].slice(0, 3),
+              address: account[0],
               buy: false,
               timestamp: serverTimestamp()
           })
 
           alert("You have sold this artist's key");
+        }
     
             if (receipt && receipt.hash && balance.toString() == 1) {
               await deleteDoc(doc(db, "accounts", accounts[0], "myKeys", getAddTwo));
@@ -2437,8 +2453,13 @@ const openUploadSong = () => {
 </div>
                     <div style={{ fontFamily: 'Reddit Mono' }} className="flex ml-2 flex-col  mt-0 p-0 text-start w-28 bg-[#6ac8ff] justify-center items-center rounded-lg text-white text-sm py-1">
 
-                    
-<p className="mt-0"> {timeLeft.days !== undefined ? displayTime : "Time's up!"}</p>
+
+              {
+                data.data.limited ? (
+                  <p className="mt-0"> {timeLeft.days !== undefined ? displayTime : "Time's up!"}</p>
+                ) : <p>...</p>
+              }      
+
 
 </div>
 

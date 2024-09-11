@@ -214,6 +214,36 @@ const handleClick = () => {
 
 
 
+const handleClickMobile = () => {
+  if (isPlaying) {
+    audioRef.current.pause();
+    setIsPlaying(false);
+  }
+  
+  // Get the next index
+  const newIndex = (currentIndex + 1) % allMusic.length;
+  
+  // Update the current index
+  setCurrentIndex(newIndex);
+
+  // Get the timestamp of the next song and set the target date
+  if (allMusic[newIndex] && allMusic[newIndex].data.timestamp) {
+    const serverTimestamp = allMusic[newIndex].data.timestamp;
+    const targetTime = new Date(serverTimestamp.toDate().getTime() + 3 * 24 * 60 * 60 * 1000); // 3 days later
+    setTargetDate(targetTime);
+  }
+
+  // Additional logic for changing background and resetting title input
+  changeBackground();
+  setTitleInput("");
+
+  // Play the next song
+  handlePlayMusic(allMusic[newIndex].data.song);
+};
+
+
+
+
 
 // Prejsna verzija handleClick
 
@@ -411,9 +441,10 @@ const [back, setBack] = useState(0);
             console.log("Transaction confirmed:", receipt.hash);
     
             if (receipt.hash) {
-              await addDoc(collection(db, "accounts", account[0], "history"), {
+              await addDoc(collection(db, "accounts", add, "history"), {
                 value: priceInEtherr,
                 name: account[0].slice(0, 3),
+                address: account[0],
                 buy: true,
                 timestamp: serverTimestamp()
             })
@@ -567,12 +598,15 @@ const displayTime = `${timeLeft.days || '00'}:${timeLeft.hours || '00'}:${timeLe
   return (
     <div className={styles.backgroundForm}>
         <Link href="/profiles/main">
-        <div className="absolute top-5 right-5 bg-white p-3 rounded-lg px-6">
-            <div className="text-sm" style={{ fontFamily: 'Reddit Mono' }}>Upload music</div>
-        </div>
+        <div className="absolute top-5 right-0 left-0 bg-white p-3 rounded-lg mx-3 px-6 sm:w-auto sm:right-5 sm:left-auto flex justify-center items-center">
+    <div className="text-sm" style={{ fontFamily: 'Reddit Mono' }}>Upload music</div>
+</div>
+
+
         </Link>
-        <div style={{ fontFamily: 'Reddit Mono' }} className="mt-24 text-white text-3xl">Discover new artists</div>
-        <img src="https://i.postimg.cc/15y4pXbG/Group-1-1.png" className="h-12 absolute left-5 top-5 cursor-pointer" />
+        <div style={{ fontFamily: 'Reddit Mono', color: "white" }} className="mt-24 text-white text-3xl hidden sm:block">Discover new artists</div>
+        <img src="https://i.postimg.cc/15y4pXbG/Group-1-1.png" className="h-12 absolute left-5 top-5 cursor-pointer hidden sm:block" />
+
        {/* <div className="hidden sm:flex mt-4 overflow-x-auto">
             <img src="https://i.postimg.cc/7LY02nX5/9098818-Coop-Records-Headshot.webp" className="h-14 w-14 border border-white rounded-full mx-2" />
             <img src="https://i.postimg.cc/SRrmCCgK/8138403-new-Image.webp" className="h-14 w-14 rounded-full mx-2 border border-white" />
@@ -593,10 +627,10 @@ const displayTime = `${timeLeft.days || '00'}:${timeLeft.hours || '00'}:${timeLe
 
         <div
       style={backgroundStyle}
-      className="relative pt-10 pb-24 w-full rounded-2xl flex flex-col sm:flex-row justify-between"
+      className="relative pt-10 pb-10 sm:pb-24 w-full rounded-2xl flex flex-col sm:flex-row justify-between"
     >
-                <div className="absolute bottom-5 right-5 flex w-full justify-center items-center">
-            <div className="progress-container" style={{ width: '90%', height: '2px', backgroundColor: '#ddd', marginLeft: 50, marginRight: 20 }}>
+                <div className="absolute bottom-5 right-0 sm:right-5 hidden sm:flex w-full justify-center items-center">
+            <div className="hidden sm:block" style={{ width: '90%', height: '2px', backgroundColor: '#ddd', marginLeft: 50, marginRight: 20 }}>
                 <div className="progress-bar" style={{ width: `${progress}%`, height: '100%', backgroundColor: 'black' }}></div>
             </div>
     <div className={`w-14 h-12 bg-white cursor-pointer hover:w-16 hover:h-14 transform transition-all rounded-full flex justify-center items-center ${isVisible ? 'opacity-100' : 'opacity-0'}`}
@@ -617,15 +651,45 @@ const displayTime = `${timeLeft.days || '00'}:${timeLeft.hours || '00'}:${timeLe
         <img src="https://i.postimg.cc/7LsGm3pb/3-Xa-YMX-Logo-Makr.png" className="w-4" />
     </div>
     </div>
-    <div className="relative mr-0 mt-12 sm:mt-0 sm:mr-0 ml-0">
+    <div className="relative mr-0 mt-0 sm:mt-0 sm:mr-0 ml-0">
     
-      <div className="relative overflow-hidden cursor-pointer ml-8 mr-8 sm:mr-0" style={{ height: 220, borderRadius: 10 }}>
+      <div className="relative overflow-hidden ml-8 mr-8 sm:mr-0" style={{ height: 220, borderRadius: 10 }}>
         
         
-        {allMusic.length > 0 && (
-          <img ref={blurryImageRef} className="absolute top-0 left-0 w-full h-full object-cover rounded-md" src={allMusic[currentIndex].data.image} />
-       
-      )}
+      {allMusic.length > 0 && (
+  <div className="relative w-full h-full">
+    {/* The Blurry Image (always visible) */}
+    <img 
+      ref={blurryImageRef} 
+      className="absolute top-0 left-0 w-full h-full object-cover rounded-md" 
+      src={allMusic[currentIndex].data.image} 
+    />
+
+    {/* Buttons (only visible on small screens) */}
+    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex justify-center items-center sm:hidden">
+      {/* Play/Pause Button */}
+      <div 
+        className={`w-16 h-16 mr-6 bg-white cursor-pointer  transform transition-all rounded-full flex justify-center items-center ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+        onClick={() => handlePlayMusic(allMusic[currentIndex].data.song)}
+      >
+        {isPlaying ? (
+          <img src="https://i.postimg.cc/hGktpVCT/8-Vjj-E5-Logo-Makr.png" className="w-5" />
+        ) : (
+          <img src="https://i.postimg.cc/13QDBT4V/5yp68q-Logo-Makr.png" className="w-5" />
+        )}
+      </div>
+
+      {/* Next Button */}
+      <div 
+        className={`w-16 h-16 bg-white cursor-pointer ml-2 transform transition-all rounded-full flex justify-center items-center ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+        onClick={handleClickMobile}
+      >
+        <img src="https://i.postimg.cc/7LsGm3pb/3-Xa-YMX-Logo-Makr.png" className="w-5" />
+      </div>
+    </div>
+  </div>
+)}
+
         
         <div ref={textContainerRef} className="relative overflow-y-scroll h-full justify-center flex" style={{ paddingTop: '100%', width: 220 }}>
        
@@ -655,7 +719,7 @@ const displayTime = `${timeLeft.days || '00'}:${timeLeft.hours || '00'}:${timeLe
                     <div style={{ fontFamily: 'Reddit Mono' }} className="flex flex-col  mt-0 p-0 text-start w-28 bg-[#6ac8ff] justify-center items-center rounded-lg text-white text-sm py-1">
 
                     
-                    <p>
+                    <p className="text-xs sm:text-sm">
                     {timeLeft.days !== undefined ? displayTime : "Time's up!"}
            
           </p>
@@ -665,7 +729,7 @@ const displayTime = `${timeLeft.days || '00'}:${timeLeft.hours || '00'}:${timeLe
                     
 {allMusic.length > 0 && (
       <Link href={`/profiles/${allMusic[currentIndex].data.artist}`} onClick={handleStopMusic}>
-      <p className="mt-0">
+      <p className="mt-0 text-xs sm:text-sm">
         {allMusic[currentIndex].data.artist.length > 6 
           ? `${allMusic[currentIndex].data.artist.slice(0, 3)}...${allMusic[currentIndex].data.artist.slice(-3)}` 
           : allMusic[currentIndex].data.artist}
@@ -681,7 +745,7 @@ const displayTime = `${timeLeft.days || '00'}:${timeLeft.hours || '00'}:${timeLe
                 <>
                   <div className="flex items-center mt-2">
                         
-                  <p className="text-white text-lg font-semibold mt-1 ml-2">Listen to this song, give it a title, and be a part of the next big hit.</p>
+                  <p className="text-white text-xs sm:text-lg font-semibold mt-1 ml-2">Listen to this song, give it a title, and be a part of the next big hit.</p>
                   
                   </div>
             
@@ -692,9 +756,12 @@ const displayTime = `${timeLeft.days || '00'}:${timeLeft.hours || '00'}:${timeLe
                   onChange={(e) => setTitleInput(e.target.value)}
                   value={titleInput}
                   placeholder="Write a title..."
-                  className="w-full border-0 border-b border-white bg-transparent p-2 text-sm placeholder-gray-300 focus:outline-none"
+                  className="w-full border-0 border-b border-white bg-transparent p-2 sm:text-sm text-xs placeholder-gray-300 focus:outline-none"
               />
-             <div onClick={sendTitle} className="bg-gray-700 p-2 hover:bg-black text-white rounded-full mt-5 justify-center flex items-center">Send</div>
+<div onClick={sendTitle} className="bg-gray-700 p-2 hover:bg-black text-xs sm:text-base mt-3 sm:mt-5 text-white rounded-full justify-center flex items-center">
+    Send
+</div>
+
               </div>
               </>
               ) : (
@@ -709,7 +776,7 @@ const displayTime = `${timeLeft.days || '00'}:${timeLeft.hours || '00'}:${timeLe
                 
                 </div>
           
-                <p className="text-gray-200 text-md mt-1 ml-2 pb-0">One key holder will receive a one-of-a-kind limited edition of this music collectible.</p>
+                <p className="text-gray-200 text-xs sm:text-base mt-1 ml-2 pb-0">One key holder will receive a one-of-a-kind limited edition of this music collectible.</p>
             <div className="flex items-center p-2 mt-4 border-t border-[#cfcfcf]">
             <p className="p-0 pb-0 font-bold text-white">FREE</p>
             <p className="text-gray-200 text-sm ml-3">0/1 mints</p>

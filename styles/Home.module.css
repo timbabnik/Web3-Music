@@ -378,6 +378,11 @@
   position: relative;
 }
 
+.mainTitle {
+  font-size: 30px;
+  margin-top: 100px;
+}
+
 
 .modalcontentTwo {
   background-color: #fff; /* Set the background color of your modal */
@@ -2215,7 +2220,7 @@ display: flex;
     margin-top: 100px;
     border-top-left-radius: 20px;
     border-top-right-radius: 20px;
-    padding: 60px;
+    padding: 30px;
     
   }
 }
@@ -2317,6 +2322,8 @@ display: flex;
     display: flex;
     flex-direction: column;
   }
+
+  
 }
 
 @media (prefers-color-scheme: dark) {
