@@ -833,19 +833,25 @@ async function chooseTitlesendTest() {
       try {
           const result = await ipfs.add(JSON.stringify(imageObjectTitle));
           const balance = await contract.keysSupply(id);
+          console.log("tukiiiiii545454");
+          console.log(getCountdown[0].data.imageUrl, selectTitle, getCountdown[0].data.song, account[0])
+          
 
           if (result) {
+            console.log("result dela")
               if (balance.toString() > 0) {
+                console.log("balance dela")
                   // Listen for the event before sending the transaction
                   contract.on('MusicCollectionCreated', async (creator, collectionAddress) => {
                       console.log(`New music collection created by ${creator}, address: ${collectionAddress}`);
                       console.log(`https://timomarket.infura-ipfs.io/ipfs/${result.path}`)
+                      console.log("A ti je dal contract address?")
                       // Verify the newly created contract
                       
-                    await verifyContract(collectionAddress, [accounts[0], 0x4d4DdfB01DAa677a04d5c5278A6075A4cf7d804b, `https://timomarket.infura-ipfs.io/ipfs/${result.path}`, selectTitle, ""]);
+                    
 
                       // Add document to Firestore
-                      await addDoc(collection(db, "accounts", accounts[0], "mySongs"), {
+                      await addDoc(collection(db, "accounts", account[0], "mySongs"), {
                           image: getCountdown[0].data.imageUrl,
                           title: selectTitle,
                           song: getCountdown[0].data.song,
@@ -854,16 +860,43 @@ async function chooseTitlesendTest() {
 
                       // Remove the event listener after receiving the event
                       contract.off('MusicCollectionCreated');
+                      console.log("5656565")
                   });
-
+                  console.log("kaj pa tuki")
                   const transaction = await contract.createMusicCollection(`https://timomarket.infura-ipfs.io/ipfs/${result.path}`, selectAddress, selectTitle, selectSignature);
                   const receipt = await transaction.wait();
-                  console.log(`https://timomarket.infura-ipfs.io/ipfs/${result.path}`)
-                  console.log(receipt, receipt.hash, "lalalalalalla");
+const logs = receipt.logs;
+const iface = new ethers.Interface(MusicFactory.abi); // Use ethers.Interface in v6
 
-                  if (receipt && receipt.hash) {
-                      chooseTitleAndSenddd();
-                  }
+// Find the log that matches the "MusicCollectionCreated" event
+let collectionAddress = null;
+
+for (let log of logs) {
+    try {
+        const parsedLog = iface.parseLog(log); // Try parsing each log
+        if (parsedLog.name === "MusicCollectionCreated") {
+            collectionAddress = parsedLog.args[1]; // This assumes the second argument is the collection address
+            console.log("Collection Address:", collectionAddress);
+            break; // Exit the loop once we find the correct log
+        }
+    } catch (err) {
+        // If the log doesn't match the event, parsing will fail. We catch and continue.
+        console.log("Log parsing failed", err);
+    }
+}
+
+if (!collectionAddress) {
+    console.log("No MusicCollectionCreated event found in the logs.");
+} else {
+    await addDoc(collection(db, "accounts", account[0], "mySongs"), {
+        image: getCountdown[0].data.imageUrl,
+        title: selectTitle,
+        song: getCountdown[0].data.song,
+        smartContractAddress: collectionAddress
+    });
+    chooseTitleAndSenddd();
+}
+
 
                   // Navigate to /profiles/add
                   router.push(`/profiles/${id}`);
@@ -1055,13 +1088,40 @@ async function deleteLimitedCountdownn(idOf, jsonTit, address, song, jsonLim) {
         // Execute the transaction
         const transaction = await contract.createMusicCollectionTwo(jsonTit, address, song, jsonLim);
         const receipt = await transaction.wait();  // Wait for the transaction to be mined
+        const logs = receipt.logs;
+const iface = new ethers.Interface(MusicFactory.abi); // Use ethers.Interface in v6
 
-        if (receipt && receipt.hash) {
-          await deleteDoc(doc(db, "accounts", accounts[0], "countdown", idOf));
-          alert("You have sent the NFT to a random key holder");
-        } else {
-          console.log("Transaction failed or no receipt found");
+// Find the log that matches the "MusicCollectionCreated" event
+let collectionAddress = null;
+
+for (let log of logs) {
+    try {
+        const parsedLog = iface.parseLog(log); // Try parsing each log
+        if (parsedLog.name === "MusicCollectionCreated") {
+            collectionAddress = parsedLog.args[1]; // This assumes the second argument is the collection address
+            console.log("Collection Address:", collectionAddress);
+            break; // Exit the loop once we find the correct log
         }
+    } catch (err) {
+        // If the log doesn't match the event, parsing will fail. We catch and continue.
+        console.log("Log parsing failed", err);
+    }
+}
+
+if (!collectionAddress) {
+    console.log("No MusicCollectionCreated event found in the logs.");
+} else {
+    await addDoc(collection(db, "accounts", account[0], "mySongs"), {
+        image: getCountdown[0].data.imageUrl,
+        title: getCountdown[0].data.title,
+        song: getCountdown[0].data.song,
+        smartContractAddress: collectionAddress
+    });
+    await deleteDoc(doc(db, "accounts", accounts[0], "countdown", idOf));
+          alert("You have sent the NFT to a random key holder");
+}
+
+        
       } else {
         alert("You don't have any key holders");
       }
