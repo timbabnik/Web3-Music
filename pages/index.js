@@ -598,7 +598,7 @@ const displayTime = `${timeLeft.days || '00'}:${timeLeft.hours || '00'}:${timeLe
   return (
     <div className={styles.backgroundForm}>
         <Link href="/profiles/main">
-        <div className="absolute top-5 right-0 left-0 bg-white p-3 rounded-lg mx-3 px-6 sm:w-auto sm:right-5 sm:left-auto flex justify-center items-center">
+        <div className="absolute top-5 right-0 left-0 bg-white p-3 rounded-lg mx-7 px-6 sm:w-auto sm:right-5 sm:left-auto flex justify-center items-center">
     <div className="text-sm" style={{ fontFamily: 'Reddit Mono' }}>Upload music</div>
 </div>
 
