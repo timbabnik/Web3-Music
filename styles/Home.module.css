@@ -342,7 +342,7 @@
 
 .modalcontenttt {
   background-color: #fff; /* Set the background color of your modal */
-  height: 780px;
+  height: 800px;
   width: 600px;
   border-radius: 15px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.3); /* Optional: Add a box shadow for a raised effect */

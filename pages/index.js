@@ -7,6 +7,8 @@ import { db } from '../firebase';
 import { useRouter } from "next/router";
 import Mutest from "./Mutest.json";
 import MusicFactory from "./MusicFactory.json";
+import { DynamicContextProvider, useDynamicContext, DynamicWidget } from '@dynamic-labs/sdk-react-core';
+import { EthereumWalletConnectors } from "@dynamic-labs/ethereum";
 
 
 function Music() {
@@ -593,9 +595,113 @@ const [back, setBack] = useState(0);
 
 const displayTime = `${timeLeft.days || '00'}:${timeLeft.hours || '00'}:${timeLeft.minutes || '00'}:${timeLeft.seconds || '00'}`;
 
+
+
+const { primaryWallet, provider, setShowAuthFlow } = useDynamicContext(); // Get wallet info and provider
+
+  const sendTitledff = async () => {
+    try {
+      if (!primaryWallet) {
+        alert('Please connect to your wallet first!');
+        return;
+      }
+
+      const accountAddress = primaryWallet.address;
+
+      // Your logic here
+      console.log('Connected account address:', accountAddress);
+      alert('Successfully retrieved and used the wallet address.');
+    } catch (error) {
+      console.error('Error using the wallet address:', error.message);
+    }
+  };
+
+
+  useEffect(() => {
+    // Check if the wallet is connected
+    if (primaryWallet) {
+      // Call sendTitle when the wallet is connected
+      sendTitle();
+    }
+  }, [primaryWallet]); 
+
+
+  const sendTitleDynamic = async () => {
+    
+  
+    if (!primaryWallet) {
+      alert('Please connect to your wallet first!');
+      return;
+    }
+  
+    const { address: account } = primaryWallet;
+  
+    // Ensure the provider is available
+    if (!provider) {
+      alert('Provider not available.');
+      return;
+    }
+  
+    // Check the network chain ID
+    const chainId = await provider.request({ method: 'eth_chainId' });
+    
+    // Check if it's not Base Sepolia (chain ID 84532 in decimal)
+    if (parseInt(chainId, 16) !== 8453) {
+      alert('Please switch to the Base network.');
+      return; // Exit the function early if the network is incorrect
+    }
+  
+    try {
+      // Create a signer instance
+      const signer = provider.getSigner();
+    
+      // Create contract instance
+      const contract = new ethers.Contract(
+        addressss,
+        MusicFactory.abi,
+        signer
+      );
+  
+      const add = allMusic[currentIndex].data.address;
+  
+      // Check balance from smart contract
+      const balance = await contract.keysBalance(add, account);
+      console.log('Current keysBalance:', balance.toString());
+  
+      if (balance.toString() > 0) {
+        const message = titleInput; // Plain text message
+        const hash = ethers.hashMessage(message); // Hash the message if needed
+    
+        const signature = await signer.signMessage(message);
+        console.log('Signed message:', signature);
+        console.log('Hash:', hash);
+        console.log(allMusic[currentIndex].data.address);
+        console.log(account);
+  
+        // Add document to Firestore
+        await addDoc(collection(db, 'accounts', allMusic[currentIndex].data.artist, 'songTitle'), {
+          title: titleInput,
+          address: account,
+          signature: signature,
+        });
+  
+        alert('Successfully sent title idea.');
+      } else {
+        alert('You do not hold any keys for this artist.');
+      }
+  
+    } catch (error) {
+      console.error('Error signing message or interacting with smart contract:', error.message);
+    }
+  };
+  
+
+  
     
 
   return (
+    
+    
     <div className={styles.backgroundForm}>
         <Link href="/profiles/main">
         <div className="absolute top-5 right-0 left-0 bg-white p-3 rounded-lg mx-7 px-6 sm:w-auto sm:right-5 sm:left-auto flex justify-center items-center">
@@ -605,6 +711,10 @@ const displayTime = `${timeLeft.days || '00'}:${timeLeft.hours || '00'}:${timeLe
 
         </Link>
         <div style={{ fontFamily: 'Reddit Mono', color: "white" }} className="mt-24 text-white text-3xl hidden sm:block">Discover new artists</div>
+        
+ 
+
+        
         <img src="https://i.postimg.cc/15y4pXbG/Group-1-1.png" className="h-12 absolute left-5 top-5 cursor-pointer hidden sm:block" />
 
        {/* <div className="hidden sm:flex mt-4 overflow-x-auto">
@@ -647,7 +757,7 @@ const displayTime = `${timeLeft.days || '00'}:${timeLeft.hours || '00'}:${timeLe
     </div>
     <div className={`w-14 h-12 bg-white cursor-pointer ml-2 hover:w-16 hover:h-14 transform transition-all rounded-full flex justify-center items-center ${isVisible ? 'opacity-100' : 'opacity-0'}`}
 
-         onClick={handleClick}>
+         onClick={handleClickMobile}>
         <img src="https://i.postimg.cc/7LsGm3pb/3-Xa-YMX-Logo-Makr.png" className="w-4" />
     </div>
     </div>
@@ -758,10 +868,9 @@ const displayTime = `${timeLeft.days || '00'}:${timeLeft.hours || '00'}:${timeLe
                   placeholder="Write a title..."
                   className="w-full border-0 border-b border-white bg-transparent p-2 sm:text-sm text-xs placeholder-gray-300 focus:outline-none"
               />
-<div onClick={sendTitle} className="bg-gray-700 p-2 hover:bg-black text-xs sm:text-base mt-3 sm:mt-5 text-white rounded-full justify-center flex items-center">
-    Send
+<div className="bg-gray-700 p-2 hover:bg-black text-xs sm:text-base mt-3 sm:mt-5 text-white rounded-full justify-center flex items-center" onClick={() => setShowAuthFlow(true)}>
+  Send
 </div>
-
               </div>
               </>
               ) : (
@@ -953,6 +1062,7 @@ const displayTime = `${timeLeft.days || '00'}:${timeLeft.hours || '00'}:${timeLe
         
        
     </div>
+
   )
 }
 

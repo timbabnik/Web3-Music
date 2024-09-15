@@ -26,6 +26,7 @@ function Profil() {
     const [selectedtwo, setSelectedtwo] = useState(false);
     const [accounts, setAccounts] = useState("");
     const [percentage, setPercentage] = useState("");
+    const [email, setEmail] = useState("");
 
     const [allKeys, setAllKeys] = useState([]);
 
@@ -601,7 +602,8 @@ const addIpfs = async () => {
       imageUrl: avatarUrl,
       song: songUrl,
       limited: false,
-      timestamp: serverTimestamp()
+      timestamp: serverTimestamp(),
+      email: email
     });
   alert("Succesful upload");
   setUploadSong(false);
@@ -634,7 +636,8 @@ const addLimited = async () => {
         song: songUrl,
         title: spotifyLink,
         limited: true,
-        timestamp: serverTimestamp()
+        timestamp: serverTimestamp(),
+        email: email
       });
   
       console.log("Document added with timestamp");
@@ -1955,7 +1958,19 @@ const openUploadSong = () => {
                 />
               </div>
             </div>
-              <div className="mt-8 flex items-center w-full">
+            <div className="mt-8 flex items-center w-full">
+                <div className="">
+                  <p className="text-white text-base">Email</p>
+                  <p className="text-xs text-gray-300" style={{ width: 200 }}></p>
+                </div>
+                <input onChange={(e) => setEmail(e.target.value)} value={email} placeholder="example@gmail.com" className="w-full ml-4 p-2 rounded-lg bg-[#1d212b] text-white" />
+              </div>
+              <div className="flex items-center w-full bg-black mt-0">
+                <div className="w-full p-0">
+                  
+                </div>
+              </div>
+              <div className="mt-0 flex items-center w-full">
                 <div className="">
                 
                   <p className="text-xs text-gray-300" style={{ width: 200 }}></p>
@@ -1967,6 +1982,7 @@ const openUploadSong = () => {
                   
                 </div>
               </div>
+              
             </div>
 
             ) : selected.title == "Limited edition" ? (
@@ -2076,7 +2092,18 @@ const openUploadSong = () => {
                   
                 </div>
               </div>
-            
+              <div className="mt-8 flex items-center w-full">
+                <div className="">
+                  <p className="text-white text-base">Email</p>
+                  <p className="text-xs text-gray-300" style={{ width: 200 }}></p>
+                </div>
+                <input onChange={(e) => setEmail(e.target.value)} value={email} placeholder="example@gmail.com" className="w-full ml-4 p-2 rounded-lg bg-[#1d212b] text-white" />
+              </div>
+              <div className="flex items-center w-full bg-black mt-0">
+                <div className="w-full p-0">
+                  
+                </div>
+              </div>
                 </div>
             )  : <div className="w-full border-2 border-[#1e2641] rounded-lg bg-[#121728] justify-center items-center flex">
                     <p>Select one option above</p>
