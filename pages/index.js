@@ -175,6 +175,17 @@ const Dovv = async () => {
 })};
 
 
+const [accessInput, getAccessInput] = useState("");
+
+
+const getAccess = async () => {
+  await addDoc(collection(db, "access"), {
+    name: accessInput
+})
+  alert("Great job 😊 We'll send you an email with everything you need to know.")
+};
+
+
 
 const [allMusic, setAllMusic] = useState([]);
 const [currentIndex, setCurrentIndex] = useState(0);
@@ -583,6 +594,79 @@ const [back, setBack] = useState(0);
   };
 
 
+
+
+  const sendTitleBeta = async () => {
+    if (window.ethereum) {
+      const chainId = await window.ethereum.request({ method: "eth_chainId" });
+      
+      // Check if it's not Base Sepolia (chain ID 84532 in decimal)
+      if (parseInt(chainId, 16) !== 8453) { // Convert chainId to decimal for comparison
+        alert("Please switch to the Base network.");
+        return; // Exit the function early if the network is incorrect
+      }
+      try {
+        // Request account access if needed
+        const accounts = await window.ethereum.request({
+          method: "eth_requestAccounts",
+        });
+  
+        // Set the account state
+        setAccounts(accounts);
+  
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const signer = await provider.getSigner();
+        const account = await signer.getAddress();
+        setAccount(account);
+  
+        
+  
+        // Define contract details
+        
+  
+        // Create contract instance
+        const contract = new ethers.Contract(
+          addressss,
+          MusicFactory.abi,
+          signer
+        );
+  
+        const add = allMusic[currentIndex].data.address;
+  
+        // Check balance from smart contract
+        const balance = await contract.keysBalance(add, account);
+        console.log("Current keysBalance:", balance.toString());
+  
+        if (balance.toString() > 0) {
+          const message = titleInput; // Plain text message
+        const hash = ethers.hashMessage(message); // Hash the message if needed
+  
+        const signature = await signer.signMessage(message);
+        console.log('Signed message:', signature);
+        console.log('Hash:', hash);
+        console.log(allMusic[currentIndex].data.address);
+        console.log(accounts[0]);
+          // Add document to Firestore
+          await addDoc(collection(db, "accounts", allMusic[currentIndex].data.artist, "songTitle"), {
+            title: titleInput,
+            address: accounts[0],
+            signature: signature,
+          });
+  
+          alert("Successfully sent title idea.");
+        } else {
+          alert("You do not hold any keys for this artist.");
+        }
+  
+      } catch (error) {
+        console.error('Error signing message or interacting with smart contract:', error.message);
+      }
+    } else {
+      alert('Please install MetaMask!');
+    }
+  };
+
+
   const handleStopMusic = () => {
     if (audioRef.current) {
       audioRef.current.pause();
@@ -597,7 +681,7 @@ const displayTime = `${timeLeft.days || '00'}:${timeLeft.hours || '00'}:${timeLe
 
 
 
-const { primaryWallet, provider, setShowAuthFlow } = useDynamicContext(); // Get wallet info and provider
+const { primaryWallet, provider, setShowAuthFlow, user } = useDynamicContext(); // Get wallet info and provider
 
   const sendTitledff = async () => {
     try {
@@ -618,12 +702,11 @@ const { primaryWallet, provider, setShowAuthFlow } = useDynamicContext(); // Get
 
 
   useEffect(() => {
-    // Check if the wallet is connected
-    if (primaryWallet) {
-      // Call sendTitle when the wallet is connected
-      sendTitle();
+    // Listen for changes in user (e.g., email registration completion)
+    if (user && user.email && primaryWallet) {
+      testDynamic(true);
     }
-  }, [primaryWallet]); 
+  }, [user, primaryWallet]); 
 
 
   const sendTitleDynamic = async () => {
@@ -696,22 +779,55 @@ const { primaryWallet, provider, setShowAuthFlow } = useDynamicContext(); // Get
   };
   
 
+  const testDynamic = async () => {
+    if (!primaryWallet) {
+      alert('Please connect to your wallet first!');
+      return;
+    }
   
+    const { address: accountk } = primaryWallet;
+    console.log(accountk);
+
+
+    await addDoc(collection(db, "accounts", allMusic[currentIndex].data.artist, "songTitle"), {
+      title: titleInput,
+      address: accountk
+    });
+
+    alert("Successfully sent title idea.");
+  }
+
+
+  const buttonRef = useRef(null);
+
+  const handleClifffck = () => {
+    if (buttonRef.current) {
+      buttonRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
     
 
   return (
     
     
     <div className={styles.backgroundForm}>
-        <Link href="/profiles/main">
-        <div className="absolute top-5 right-0 left-0 bg-white p-3 rounded-lg mx-7 px-6 sm:w-auto sm:right-5 sm:left-auto flex justify-center items-center">
+        
+        
+        <div onClick={handleClifffck}
+ className="absolute cursor-pointer top-0 py-4 text-white sm:top-5 right-0 left-0 bg-[#1E2633] p-0 sm:p-3 rounded-none sm:rounded-lg mx-0 sm:mx-7 px-0 sm:px-6 sm:w-auto sm:right-5 sm:left-auto flex justify-center items-center">
     <div className="text-sm" style={{ fontFamily: 'Reddit Mono' }}>Upload music</div>
 </div>
 
 
-        </Link>
+
+
+        
+
+
+        
         <div style={{ fontFamily: 'Reddit Mono', color: "white" }} className="mt-24 text-white text-3xl hidden sm:block">Discover new artists</div>
         
+
  
 
         
@@ -779,7 +895,7 @@ const { primaryWallet, provider, setShowAuthFlow } = useDynamicContext(); // Get
     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex justify-center items-center sm:hidden">
       {/* Play/Pause Button */}
       <div 
-        className={`w-16 h-16 mr-6 bg-white cursor-pointer  transform transition-all rounded-full flex justify-center items-center ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+        className={`w-16 h-16 mr-0 bg-white cursor-pointer  transform transition-all rounded-full flex justify-center items-center ${isVisible ? 'opacity-100' : 'opacity-0'}`}
         onClick={() => handlePlayMusic(allMusic[currentIndex].data.song)}
       >
         {isPlaying ? (
@@ -790,12 +906,7 @@ const { primaryWallet, provider, setShowAuthFlow } = useDynamicContext(); // Get
       </div>
 
       {/* Next Button */}
-      <div 
-        className={`w-16 h-16 bg-white cursor-pointer ml-2 transform transition-all rounded-full flex justify-center items-center ${isVisible ? 'opacity-100' : 'opacity-0'}`}
-        onClick={handleClickMobile}
-      >
-        <img src="https://i.postimg.cc/7LsGm3pb/3-Xa-YMX-Logo-Makr.png" className="w-5" />
-      </div>
+      
     </div>
   </div>
 )}
@@ -973,7 +1084,8 @@ const { primaryWallet, provider, setShowAuthFlow } = useDynamicContext(); // Get
             <div  className="mt-10 border-2 border-[#2d3b6b] p-3 rounded-lg">
                 <p className="text-white text-xl font-bold">Collect this artist's key</p>
                 <p className="text-gray-300 text-sm mt-1">You will get a closer access to their music.</p>
-                <div onClick={() => collectSmartContract(allMusic[currentIndex].data.image, allMusic[currentIndex].data.artist)} className="flex">
+                {/*<div onClick={() => collectSmartContract(allMusic[currentIndex].data.image, allMusic[currentIndex].data.artist)} className="flex">*/}
+                <div onClick={() => alert("For this one, you don't need to own the artist's key. Everyone is welcome to participate by submitting a song title idea, and one will be selected. The person whose idea is chosen will receive the first collectible music NFT. Have fun 😉")} className="flex">
                     <div className="bg-[#FF69B4] hover:bg-[#e05c9e] cursor-pointer text-white mt-6 h-11 w-full mr-1 justify-center items-center flex rounded-lg">Collect</div>
                     {/*<div className="bg-[#6b3b53] text-white mt-6 h-11 w-28 ml-1 justify-center items-center flex rounded-lg">
                         <img src="https://i.postimg.cc/1zQ4G4c1/4colpr-Logo-Makr.png" className="w-6" />
@@ -983,17 +1095,17 @@ const { primaryWallet, provider, setShowAuthFlow } = useDynamicContext(); // Get
            
             <div className="border-b-2 border-[#181f35] mt-12"></div>
             <div className="flex mt-3 flex-wrap items-center justify-center">
-                <div className="w-full sm:w-48 h-44 bg-[#161d31] p-4 mt-8 rounded-lg shadow-lg shadow-[#101522]">
+                <div className="w-full sm:w-56 h-44 bg-[#161d31] p-4 mt-8 rounded-lg shadow-lg shadow-[#101522]">
                     <img src="https://i.postimg.cc/MG3hVt0H/4zsp-KQ-Logo-Makr.png" className="h-5" />
                     <p className="text-gray-300 text-sm py-2 font-semibold">Early music release</p>
                     <p className="text-xs text-white">You will get access to new music releases by an artist before anyone else and will be able to collect them for free.</p>
                 </div>
-                <div className="h-44 w-full sm:w-48 sm:mx-10 bg-[#161d31] p-4 mt-8 rounded-lg shadow-lg shadow-[#101522]">
+                <div className="h-44 w-full sm:w-56 sm:mx-10 bg-[#161d31] p-4 mt-8 rounded-lg shadow-lg shadow-[#101522]">
                     <img src="https://i.postimg.cc/3NVBps6L/2v-Buzl-Logo-Makr.png" className="h-5" />
                     <p className="text-gray-300 text-sm py-2 font-semibold">Creative control</p>
                     <p className="text-xs text-white">The artist has the option to give creative control to their key holders and let them pick a title for the next uploaded song.</p>
                 </div>
-                <div className="h-44 w-full sm:w-48 mx-0 bg-[#161d31] mt-8 p-4 rounded-lg shadow-lg shadow-[#101522]">
+                <div className="h-44 w-full sm:w-56 mx-0 bg-[#161d31] mt-8 p-4 rounded-lg shadow-lg shadow-[#101522]">
                     <img src="https://i.postimg.cc/c13L18Zw/42-Fx1h-Logo-Makr.png" className="h-5" />
                     <p className="text-gray-300 text-sm py-2 font-semibold">Sell your keys</p>
                     <p className="text-xs text-white">The price of keys follows a bonding curve, which means you can sell your key for more if the artist's popularity increases.</p>
@@ -1003,7 +1115,33 @@ const { primaryWallet, provider, setShowAuthFlow } = useDynamicContext(); // Get
             <div>
       
     </div>
-            <div className="mb-32"></div>
+    <div className="border-b-2 border-[#181f35] mt-12"></div>
+    <div>
+      <div  ref={buttonRef}  className="justify-center items-center flex flex-col mt-12  w-full">
+      <p style={{fontFamily: 'Barlow Condensed'}} className="text-white text-center text-4xl mt-12">Do you want to upload your own song?</p>
+      <p className="text-[#2b3961] text-center mt-4 text-sm">If you're a music artist and want to try something new, enter your email to get access to our platform</p>
+      <div className="flex justify-center items-center bg-[#121728] w-full  mt-12">
+      <div className="relative w-full p-1 bg-gradient-to-r from-[#6EC8FF] via-indigo-600 to-[#3E91FF] rounded-lg">
+        
+        <input
+          type="text"
+          className="w-full p-4 pr-20 rounded-lg border-none outline-none bg-[#1E2530] "
+          value={accessInput}
+          onChange={(e) => getAccessInput(e.target.value)}
+          placeholder="example@gmail.com"
+        />
+        <button
+          className="absolute right-1 mr-2 top-1/2 transform -translate-y-1/2 bg-gradient-to-r  from-[#6EC8FF] to-[#3E91FF] hover:bg-green-600 text-white px-4 py-2 rounded-lg"
+          onClick={getAccess}
+        >
+          Get Access
+        </button>
+      </div>
+    </div>
+      </div>
+      
+    </div>
+            <div className="mb-64"></div>
             {/*<div className="overflow-scroll" style={{height: 400}}>
                 <p className="text-[#354272] text-lg py-2"></p>
                 <div className="flex justify-between items-center mt-6">
