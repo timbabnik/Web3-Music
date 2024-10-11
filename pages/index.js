@@ -179,6 +179,10 @@ const [accessInput, getAccessInput] = useState("");
 
 
 const getAccess = async () => {
+  if (accessInput == "") {
+    alert("You have to write you email");
+    return;
+  }
   await addDoc(collection(db, "access"), {
     name: accessInput
 })
@@ -814,7 +818,7 @@ const { primaryWallet, provider, setShowAuthFlow, user } = useDynamicContext(); 
         
         
         <div onClick={handleClifffck}
- className="absolute cursor-pointer top-0 py-4 text-white sm:top-5 right-0 left-0 bg-[#1E2633] p-0 sm:p-3 rounded-none sm:rounded-lg mx-0 sm:mx-7 px-0 sm:px-6 sm:w-auto sm:right-5 sm:left-auto flex justify-center items-center">
+ className="absolute cursor-pointer top-0 py-4 text-white sm:top-5 right-0 left-0 hover:bg-[#323f53] bg-[#1E2633] p-0 sm:p-3 rounded-none sm:rounded-lg mx-0 sm:mx-7 px-0 sm:px-6 sm:w-auto sm:right-5 sm:left-auto flex justify-center items-center">
     <div className="text-sm" style={{ fontFamily: 'Reddit Mono' }}>Upload music</div>
 </div>
 
@@ -825,13 +829,17 @@ const { primaryWallet, provider, setShowAuthFlow, user } = useDynamicContext(); 
 
 
         
-        <div style={{ fontFamily: 'Reddit Mono', color: "white" }} className="mt-24 text-white text-3xl hidden sm:block">Discover new artists</div>
+        <div style={{ fontFamily: 'Reddit Mono', color: "white" }} className="mt-24 text-white text-3xl hidden sm:block"></div>
         
 
  
 
-        
-        <img src="https://i.postimg.cc/15y4pXbG/Group-1-1.png" className="h-12 absolute left-5 top-5 cursor-pointer hidden sm:block" />
+        <div className="absolute left-5 top-5 cursor-pointer hidden sm:block">
+  <div className="flex items-center">
+    <img src="https://i.postimg.cc/15y4pXbG/Group-1-1.png" className="h-10 mr-0 pr-4" />
+    <p style={{ fontFamily: 'Reddit Mono', color: "white" }} className="text-white border-l pl-4">Discover New Artists</p>
+  </div>
+</div>
 
        {/* <div className="hidden sm:flex mt-4 overflow-x-auto">
             <img src="https://i.postimg.cc/7LY02nX5/9098818-Coop-Records-Headshot.webp" className="h-14 w-14 border border-white rounded-full mx-2" />
@@ -1116,16 +1124,16 @@ const { primaryWallet, provider, setShowAuthFlow, user } = useDynamicContext(); 
       
     </div>
     <div className="border-b-2 border-[#181f35] mt-12"></div>
-    <div>
+    <div className="mt-24">
       <div  ref={buttonRef}  className="justify-center items-center flex flex-col mt-12  w-full">
       <p style={{fontFamily: 'Barlow Condensed'}} className="text-white text-center text-4xl mt-12">Do you want to upload your own song?</p>
-      <p className="text-[#2b3961] text-center mt-4 text-sm">If you're a music artist and want to try something new, enter your email to get access to our platform</p>
+     
       <div className="flex justify-center items-center bg-[#121728] w-full  mt-12">
-      <div className="relative w-full p-1 bg-gradient-to-r from-[#6EC8FF] via-indigo-600 to-[#3E91FF] rounded-lg">
+      <div className="relative w-full p-1 bg-gradient-to-r from-[#262f4d] via-indigo-300 to-[#262f4d] rounded-lg">
         
         <input
           type="text"
-          className="w-full p-4 pr-20 rounded-lg border-none outline-none bg-[#1E2530] "
+          className="w-full p-4 text-white pr-20 rounded-lg border-none outline-none bg-[#1E2530] "
           value={accessInput}
           onChange={(e) => getAccessInput(e.target.value)}
           placeholder="example@gmail.com"
@@ -1141,7 +1149,7 @@ const { primaryWallet, provider, setShowAuthFlow, user } = useDynamicContext(); 
       </div>
       
     </div>
-            <div className="mb-64"></div>
+            <div className="mb-24"></div>
             {/*<div className="overflow-scroll" style={{height: 400}}>
                 <p className="text-[#354272] text-lg py-2"></p>
                 <div className="flex justify-between items-center mt-6">
